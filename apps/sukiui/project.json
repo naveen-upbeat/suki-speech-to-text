@@ -49,7 +49,8 @@
       "defaultConfiguration": "development",
       "options": {
         "buildTarget": "sukiui:build",
-        "hmr": true
+        "hmr": true,
+        "proxyConfig": "apps/sukiui/proxy.conf.json"
       },
       "configurations": {
         "development": {
