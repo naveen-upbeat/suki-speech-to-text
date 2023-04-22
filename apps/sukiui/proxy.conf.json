@@ -2,5 +2,9 @@
   "/api": {
     "target": "http://localhost:3000",
     "secure": false
+  },
+  "/websockets": {
+    "target": "ws://localhost:3000/websockets",
+    "secure": false
   }
 }
