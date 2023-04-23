@@ -36,7 +36,7 @@ export const RECORDING_STATUS = {
   inactive: 'INACTIVE',
 };
 
-const AUTO_STOP_RECORDING_TIMEOUT = 10000; // auto stop recording in 10 seconds
+const AUTO_STOP_RECORDING_TIMEOUT = 12000; // auto stop recording in 10 seconds
 
 const currentEnvironments = resolveCurrentEnvironments();
 
@@ -130,7 +130,7 @@ export function App() {
       )}`
     );
 
-    if (shouldStopProcessBatching && isRecording(recordingStatus)) {
+    if (shouldStopProcessBatching) {
       appDebugLogger.log(
         'stopping recording processess at',
         new Date().getSeconds()
@@ -231,12 +231,12 @@ export function App() {
       const socketSendQueueObj = socketMessageSendQueue.current;
       if (socketSendQueueObj.length > 0) {
         const nextAvailableBlob = socketSendQueueObj.splice(0, 1) as Blob[];
-        appDebugLogger.log('Sending next available blob tp socket');
+        appDebugLogger.log('Sending next available blob to socket');
         socket.send(nextAvailableBlob.pop() as Blob);
         socketSendCounter.current++;
       }
     };
-    
+
     socket.onopen = function () {
       socket.send(JSON.stringify({ hey: 'hello' }));
     };
@@ -261,7 +261,7 @@ export function App() {
           flexDirection: 'column',
           alignItems: 'center',
           justifyItems: 'stretch',
-          justifyContent: 'center',
+          justifyContent: 'space-around',
           minHeight: '100vh',
           backgroundColor: 'rgba(244,244,105,0.1)',
         }}
@@ -298,7 +298,7 @@ export function App() {
             maxWidth: 'sm',
             boxShadow: '2px 1px 20px gray',
             backgroundColor: '#fff',
-            marginTop: '50px',
+            marginTop: '75px',
             padding: '24px',
             borderBottomRightRadius: '24px',
             borderTopLeftRadius: '24px',
@@ -346,7 +346,7 @@ export function App() {
           )}
 
           <TextField
-            value={socketDataReceivedRef.current.join(' ')}
+            value={socketDataReceivedRef.current.join(' ').trim()}
             InputLabelProps={{ shrink: true }}
             inputProps={{
               placeholder:
@@ -354,7 +354,11 @@ export function App() {
                   ? DEFAULT_TEXT_PLACEHOLDER
                   : '',
             }}
-            label="Transcription"
+            label={
+              socketDataReceivedRef.current.join('').trim().length === 0
+                ? 'Instructions'
+                : 'Transcription'
+            }
             multiline
             maxRows={10}
             minRows={4}
