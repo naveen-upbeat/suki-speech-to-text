@@ -1,74 +1,150 @@
 import WaveStream from 'react-wave-stream';
 import Modal from '@mui/material/Modal';
 import Box from '@mui/material/Box';
-import { Container, Typography, css } from '@mui/material';
+import Button from '@mui/material/Button';
+
+import { Container, Typography } from '@mui/material';
 import { isRecording } from '../app/app';
+import {
+  alignJustifyItemsCenter,
+  allCenter,
+  blinkKeyframes,
+  displayFlexRow,
+  flexColumn,
+} from '../util/styleUtils';
+import { useEffect, useState } from 'react';
+
+export type ListeningModalProps = {
+  recordingStatus: string;
+  handlers: { stopRecording: any };
+  audioData: any;
+  autoStopAfterSeconds?: number;
+};
+
+const defaultProps: Partial<ListeningModalProps> = {
+  autoStopAfterSeconds: 12,
+};
+
+const modalStyle = {
+  position: 'absolute',
+  top: '50%',
+  left: '50%',
+  transform: 'translate(-50%, -50%)',
+  width: 400,
+  bgcolor: 'background.paper',
+  border: '2px solid #000',
+  boxShadow: 24,
+  p: 4,
+};
 
 const ListeningModal = ({
   recordingStatus,
-  handlers: { stopRecording },
+  handlers,
   audioData,
-}: any) => {
-  const boxCss = css`
-    .wave-stream-box > svg#visualizer {
-      position: relative;
-    }
-  `;
+  autoStopAfterSeconds = defaultProps.autoStopAfterSeconds,
+}: ListeningModalProps) => {
+  const [autoStopCounter, setAutoStopCounter] = useState(autoStopAfterSeconds);
 
-  const modalStyle = {
-    position: 'absolute',
-    top: '50%',
-    left: '50%',
-    transform: 'translate(-50%, -50%)',
-    width: 400,
-    bgcolor: 'background.paper',
-    border: '2px solid #000',
-    boxShadow: 24,
-    p: 4,
+  useEffect(() => {
+    const timer =
+      (autoStopCounter as number) > 0 &&
+      isRecording(recordingStatus as string) &&
+      setInterval(
+        () => setAutoStopCounter((autoStopCounter as number) - 1),
+        1000
+      );
+    if (autoStopCounter === 0) {
+      handlers.stopRecording();
+    }
+    if (!isRecording(recordingStatus)) {
+      setAutoStopCounter(autoStopAfterSeconds);
+    }
+    return () => clearInterval(timer as any);
+  }, [autoStopCounter, recordingStatus]);
+
+  const extendRecording = (seconds: number) => {
+    setAutoStopCounter((autoStopCounter as number) + seconds);
   };
+
   return (
     <Modal
-      open={isRecording(recordingStatus)}
-      onClose={stopRecording}
-      onBackdropClick={stopRecording}
+      open={isRecording(recordingStatus as string)}
+      onClose={(handlers as any).stopRecording}
+      onBackdropClick={(handlers as any).stopRecording}
       aria-labelledby="modal-modal-title"
       aria-describedby="modal-modal-description"
       sx={{
-        display: 'flex',
-        alignItems: 'center',
+        ...displayFlexRow,
+        ...alignJustifyItemsCenter,
         justifyContent: 'space-around',
       }}
     >
       <Box
         sx={{
-          display: 'flex',
-          alignItems: 'center',
-          flexDirection: 'row',
+          ...displayFlexRow,
+          ...alignJustifyItemsCenter,
           marginTop: '80px',
         }}
       >
         <Container
           sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            background: '#fff',
+            ...flexColumn,
             justifyItems: 'stretch',
+            background: '#fff',
             padding: '4px 0 0 0',
           }}
           disableGutters
         >
-          <Typography
-            sx={{ justifyContent: 'center', display: 'flex' }}
-            id="modal-modal-title"
-            variant="h6"
-            component="h2"
-          >
-            Listening...
-          </Typography>
           <Box
             sx={{
-              width: '400px',
+              ...displayFlexRow,
+              ...allCenter,
+            }}
+          >
+            <Typography variant="h6">Listening...{'    '}</Typography>
+            {(autoStopCounter as number) < 5 &&
+              (autoStopCounter as number) > -1 && (
+                <Typography
+                  variant="subtitle1"
+                  sx={{ animation: `${blinkKeyframes} 1s linear infinite` }}
+                >
+                  Autostop in: {autoStopCounter}s{' '}
+                </Typography>
+              )}
+          </Box>
+          {(autoStopCounter as number) < 5 &&
+            (autoStopCounter as number) > -1 && (
+              <Box
+                sx={{
+                  ...displayFlexRow,
+                  justifyContent: 'center',
+                  marginTop: '5px',
+                  gap: '5px',
+                }}
+              >
+                <Button
+                  variant="contained"
+                  color="info"
+                  onClick={() => extendRecording(10)}
+                >
+                  Add 10s
+                </Button>
+                <Button
+                  variant="contained"
+                  color="success"
+                  onClick={() => extendRecording(15)}
+                >
+                  Add 15s
+                </Button>
+                <Button variant="contained" onClick={() => extendRecording(20)}>
+                  Add 20s
+                </Button>
+              </Box>
+            )}
+          <Box
+            sx={{
               position: 'relative',
+              width: '400px',
               height: '80px',
             }}
           >
