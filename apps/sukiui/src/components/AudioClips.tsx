@@ -3,13 +3,28 @@ import React from 'react';
 
 const AudioClips = React.memo(({ socketMessageQueueState }: any) => {
   return (
-    <Container disableGutters>
+    <Container sx={{ gap: '30px' }}>
       {socketMessageQueueState.map((bl: any, ind: number) => {
         console.log('Blob number:', ind, bl);
         return (
-          <Box sx={{ display: 'flex' }} key={'aud' + ind}>
-            <Box sx={{ flex: '0 0 50%' }}> Clip: {ind}</Box>
-            <Box sx={{ flex: '0 0 50%' }}>
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'space-around',
+              alignItems: 'center',
+              padding: '30px',
+            }}
+            key={'aud' + ind}
+          >
+            <Box
+              sx={{ flex: '0 0 30%', justifyContent: 'right', display: 'flex' }}
+            >
+              {' '}
+              Clip: {ind + 1}
+            </Box>
+            <Box
+              sx={{ flex: '0 0 60%', justifyContent: 'left', display: 'flex' }}
+            >
               <audio src={URL.createObjectURL(bl)} controls></audio>
             </Box>
           </Box>

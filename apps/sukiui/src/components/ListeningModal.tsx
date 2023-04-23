@@ -39,30 +39,37 @@ const ListeningModal = ({
         justifyContent: 'space-around',
       }}
     >
-      <Box sx={{ display: 'flex', alignItems: 'center', flexDirection: 'row' }}>
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          flexDirection: 'row',
+          marginTop: '80px',
+        }}
+      >
         <Container
           sx={{
             display: 'flex',
             flexDirection: 'column',
             background: '#fff',
             justifyItems: 'stretch',
+            padding: '4px 0 0 0',
           }}
+          disableGutters
         >
           <Typography
-            sx={{ justifyContent: 'center' }}
+            sx={{ justifyContent: 'center', display: 'flex' }}
             id="modal-modal-title"
             variant="h6"
             component="h2"
           >
-            Listening
+            Listening...
           </Typography>
           <Box
             sx={{
-              display: 'flex',
-              flexDirection: 'column',
-              width: '90%',
+              width: '400px',
               position: 'relative',
-              height: '50px',
+              height: '80px',
             }}
           >
             <WaveStream data={audioData?.data} />

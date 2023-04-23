@@ -1,11 +1,13 @@
 import styled from '@emotion/styled';
 
-import NxWelcome from './nx-welcome';
 import AppBar from '@mui/material/AppBar';
-import Box from '@mui/material/Box';
 import {
+  Box,
   Button,
   Container,
+  CssBaseline,
+  Divider,
+  Drawer,
   IconButton,
   Toolbar,
   Typography,
@@ -14,6 +16,8 @@ import MenuIcon from '@mui/icons-material/Menu';
 import TextField from '@mui/material/TextField';
 import MicTwoToneIcon from '@mui/icons-material/MicTwoTone';
 import StopCircleTwoToneIcon from '@mui/icons-material/StopCircleTwoTone';
+import RecordVoiceOverIcon from '@mui/icons-material/RecordVoiceOver';
+import SettingsVoiceIcon from '@mui/icons-material/SettingsVoice';
 import {
   useEffect,
   useLayoutEffect,
@@ -25,6 +29,8 @@ import {
 import Recorder from '../util/recorderUtils';
 import ListeningModal from '../components/ListeningModal';
 import AudioClips from '../components/AudioClips';
+import SukiLogo from '../assets/logo.png';
+import SukiFooterLogo from '../assets/footer.png';
 
 const StyledApp = styled.div`
   // Your style here
@@ -39,6 +45,13 @@ export const RECORDING_STATUS = {
 
 export const isRecording = (status: string) =>
   status === RECORDING_STATUS.recording;
+
+const DEFAULT_TEXT_PLACEHOLDER = `Steps:
+1. Click - Use Microphone button, then
+2. Click - Speak, then
+3. Observe a popup showing listening, use english language to talk / record
+4. When done click Stop or anywhere on the screen
+5. Observe this area, now containing transcription of the speech`;
 
 export function App() {
   const [textReceivedFromGoogle, setTextReceivedFromGoogle] = useState('');
@@ -72,6 +85,8 @@ export function App() {
   const socketMessageQueue = useRef<any[]>([]);
 
   const [socketMessageQueueState, setSocketSendQueue] = useState<any>([]);
+
+  const [isDebugDrawerOpen, setDebugDrawOpen] = useState(false);
 
   const onMicPermissionButtonClick = () => {
     console.log('Getting Mic permission');
@@ -203,7 +218,9 @@ export function App() {
 
   useEffect(() => {
     console.log(
-      `recording status: ${recordingStatus}, recording batching: ${shouldStopProcessBatching}, socket Data: ${socketDataFromServer}`
+      `recording status: ${recordingStatus}, recording batching: ${shouldStopProcessBatching}, socket Data: ${socketDataRef.current.join(
+        ' '
+      )}`
     );
 
     if (shouldStopProcessBatching && isRecording(recordingStatus)) {
@@ -270,9 +287,10 @@ export function App() {
   }, [recordingStatus, shouldStopProcessBatching]);
 
   const startRecording = useCallback(() => {
+    clearMessages();
     setRecordingStatus((_currentStatus) => RECORDING_STATUS.recording);
     //console.log(recordingStatus);
-    setSocketDataFromServer(['']);
+    // setSocketDataFromServer(['']);
     const recorder: any = recorderRef.current;
     // recorder.setOnAnalysed((data: any) => {
     //   setAudioData(data);
@@ -416,86 +434,190 @@ export function App() {
     //   //   /* audioDataAnalyzed.push(data); */
     //   // },
     // });
-  }, [setSocketDataFromServer, audioContextRef]);
+  }, [audioContextRef]);
+
+  const clearMessages = () => {
+    socketDataRef.current = [];
+    setSocketSendQueue([]);
+  };
 
   return (
-    <Container
-      maxWidth={false}
-      sx={{ display: 'flex', flexDirection: 'column' }}
-    >
-      <AppBar>
-        <Toolbar variant="dense">
-          <IconButton
-            edge="start"
-            color="inherit"
-            aria-label="menu"
-            sx={{ mr: 2 }}
-          >
-            <MenuIcon />
-          </IconButton>
-          <Typography variant="h6" color="inherit" component="div">
-            Suki - Speech to Text
-          </Typography>
-        </Toolbar>
-      </AppBar>
+    <>
+      <CssBaseline />
+
       <Container
+        maxWidth={false}
         sx={{
-          marginTop: '60px',
           display: 'flex',
           flexDirection: 'column',
-          gap: '20px',
           alignItems: 'center',
+          justifyItems: 'stretch',
+          justifyContent: 'center',
+          minHeight: '100vh',
+          backgroundColor: 'rgba(244,244,105,0.1)',
         }}
+        disableGutters
       >
-        <Typography>Welcome to Suki</Typography>
-        {!hasPermissionForMic && (
-          <Button variant="outlined" onClick={getMicrophonePermission}>
-            Use Microphone
-          </Button>
-        )}
-        {hasPermissionForMic && (
-          <>
-            <Button variant="outlined" onClick={startRecording}>
-              <MicTwoToneIcon />{' '}
-              {!isRecording(recordingStatus) ? 'Speak' : 'Recording...'}
-            </Button>
-
-            {isRecording(recordingStatus) && (
-              <Button
-                variant="contained"
-                sx={{ zIndex: '1301' }}
-                onClick={(e) => stopRecording()}
-              >
-                <StopCircleTwoToneIcon /> Stop
-              </Button>
-            )}
-          </>
-        )}
-
-        <TextField
-          value={socketDataRef.current.join(' ')}
-          label="Text From Speech"
-          multiline
-          maxRows={10}
-          minRows={4}
-        />
-        <Button
-          variant="outlined"
-          onClick={() => {
-            console.log('audio: ', audio, 'audio chunks: ', audioChunks);
+        <AppBar sx={{ background: '#fff', color: '#000' }}>
+          <Toolbar variant="dense">
+            <IconButton
+              edge="start"
+              color="inherit"
+              aria-label="menu"
+              sx={{ mr: 2 }}
+            >
+              <MenuIcon />
+            </IconButton>
+            <img
+              src={SukiLogo}
+              style={{ maxHeight: '20px', width: 'auto' }}
+              alt="Name of Suki as Registered Trademark"
+            />
+          </Toolbar>
+        </AppBar>
+        <Container
+          sx={{
+            flex: '0 0 80%',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            gap: '30px',
+            maxWidth: 'sm',
+            boxShadow: '2px 1px 20px gray',
+            backgroundColor: '#fff',
+            marginTop: '50px',
+            padding: '24px',
+            borderBottomRightRadius: '24px',
+            borderTopLeftRadius: '24px',
           }}
         >
-          Check Data
-        </Button>
-        <AudioClips socketMessageQueueState={socketMessageQueueState} />
-        {/* {audio && <audio src={audio} controls></audio>} */}
+          <Typography
+            sx={{
+              alignContent: 'center',
+              justifyContent: 'center',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+            }}
+            variant="h4"
+          >
+            <RecordVoiceOverIcon fontSize="large" /> Speech to Text
+          </Typography>
+          <Divider sx={{ marginTop: '-10px' }} />
+          {!hasPermissionForMic && (
+            <Button
+              variant="outlined"
+              sx={{ display: 'flex', alignItems: 'center', gap: '15px' }}
+              onClick={getMicrophonePermission}
+            >
+              Ask Microphone Permission <SettingsVoiceIcon />
+            </Button>
+          )}
+          {hasPermissionForMic && (
+            <>
+              <Button variant="outlined" onClick={startRecording}>
+                <MicTwoToneIcon />{' '}
+                {!isRecording(recordingStatus) ? 'Speak' : 'Listening...'}
+              </Button>
+
+              {isRecording(recordingStatus) && (
+                <Button
+                  variant="contained"
+                  sx={{ zIndex: '1301' }}
+                  onClick={(e) => stopRecording()}
+                >
+                  <StopCircleTwoToneIcon /> Stop
+                </Button>
+              )}
+            </>
+          )}
+
+          <TextField
+            value={socketDataRef.current.join(' ')}
+            InputLabelProps={{ shrink: true }}
+            inputProps={{
+              placeholder:
+                socketDataRef.current.join('').length === 0
+                  ? DEFAULT_TEXT_PLACEHOLDER
+                  : '',
+            }}
+            label="Transcription"
+            multiline
+            maxRows={10}
+            minRows={4}
+          />
+          <Box
+            sx={{
+              display: 'flex',
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyItems: 'center',
+              justifyContent: 'space-around',
+              gap: '30px',
+            }}
+          >
+            <Button
+              sx={{ flex: '0 0 40%' }}
+              variant="outlined"
+              onClick={clearMessages}
+            >
+              Clear
+            </Button>
+            <Button
+              sx={{ flex: '0 0 40%' }}
+              variant="outlined"
+              onClick={() => setDebugDrawOpen(true)}
+            >
+              Debug
+            </Button>
+          </Box>
+
+          {/* {audio && <audio src={audio} controls></audio>} */}
+        </Container>
+        {/* <Divider sx={{ width: '100%' }} /> */}
+        <ListeningModal
+          audioData={audioData}
+          handlers={{ stopRecording }}
+          recordingStatus={recordingStatus}
+        />
+        <Drawer
+          variant="temporary"
+          anchor="bottom"
+          open={isDebugDrawerOpen}
+          onClose={() => setDebugDrawOpen(false)}
+          ModalProps={{
+            keepMounted: true, // Better open performance on mobile.
+          }}
+          sx={{
+            display: { xs: 'block', sm: 'block' },
+            '& .MuiDrawer-paper': {
+              boxSizing: 'border-box',
+              width: '100%',
+              height: '200px',
+            },
+          }}
+        >
+          <Container>
+            <AudioClips socketMessageQueueState={socketMessageQueueState} />
+          </Container>
+        </Drawer>
+        <Box
+          sx={{
+            width: '100%',
+            display: 'flex',
+            justifyContent: 'center',
+            marginTop: '14px',
+          }}
+        >
+          <img
+            src={SukiFooterLogo}
+            width={'auto'}
+            height={'80px'}
+            alt="footer text"
+          />
+        </Box>
       </Container>
-      <ListeningModal
-        audioData={audioData}
-        handlers={{ stopRecording }}
-        recordingStatus={recordingStatus}
-      />
-    </Container>
+    </>
   );
 }
 
