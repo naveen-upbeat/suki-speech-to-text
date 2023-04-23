@@ -21,27 +21,12 @@ async function handleGoogleSpeechToText({ content }) {
 
   // Detects speech in the audio file
   const [response] = await client.recognize(request);
-  //console.log('Request google:', request);
   const transcription = response.results
     .map((result) => result.alternatives[0].transcript)
     .join(' ');
   console.log(
     `Transcription: ${transcription}, Results length: ${response.results.length}`
   );
-  console.log(
-    `ResponseResults:${response.results
-      .map((res) => {
-        console.log('alternates length: ', res.alternatives.length);
-        return res.alternatives
-          .map((alt) => {
-            console.log('trans:', alt.transcript);
-            return alt.transcript;
-          })
-          .join('---');
-      })
-      .join('+++')}`
-  );
-  //console.log('Transcription text:', bufferFromBufferString(transcription));
   return transcription;
 }
 
