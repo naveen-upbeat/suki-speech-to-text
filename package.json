@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "license": "MIT",
   "scripts": {
-    "build": "npx nx run-many --target=build --projects=nx-fullstack,api --parallel=true",
+    "build": "npx nx run-many --target=build --projects=sukiui,sukiapi --parallel=true",
     "start": "node dist/apps/sukiapi/main.js"
   },
   "private": true,
