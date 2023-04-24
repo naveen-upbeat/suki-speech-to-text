@@ -188,7 +188,7 @@ export function App() {
   const [three2FiveSecondCounter, setThree2FiveSecondCounter] = useState(0);
   useEffect(() => {
     let timer: any = false;
-    if (three2FiveSecondCounter >= 0 && three2FiveSecondCounter < 6) {
+    if (three2FiveSecondCounter >= 0) {
       timer = setInterval(
         () => setThree2FiveSecondCounter(three2FiveSecondCounter + 1),
         1000
