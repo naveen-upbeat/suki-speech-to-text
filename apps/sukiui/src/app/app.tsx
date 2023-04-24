@@ -51,6 +51,9 @@ const appDebugLogger = new ConsoleLogger(currentEnvironments.isDebugEnabled);
 export const isRecording = (status: string) =>
   status === RECORDING_STATUS.recording;
 
+const host = process.env.HOST ?? 'localhost';
+const port = process.env.PORT ? Number(process.env.PORT) : 3000;
+
 export function App() {
   const [hasPermissionForMic, setMicrophonePermission] = useState(false);
   const [audioDataForAnalyzer, setAudioDataForAnalyzer] = useState({
@@ -148,7 +151,7 @@ export function App() {
   };
 
   useLayoutEffect(() => {
-    const socket = new WebSocket('ws://localhost:3000/ws');
+    const socket = new WebSocket(`ws://${host}:${port}/ws`);
 
     socket.onmessage = function (e) {
       const latestTranscriptionData = e.data
@@ -245,10 +248,8 @@ export function App() {
 
         if (socketSendQueueObj.length > 0) {
           const nextAvailableBlob = socketSendQueueObj.splice(0, 1);
-          setTimeout(() => {
-            socketObj.send(nextAvailableBlob.pop() as Blob);
-            socketSendCounter.current++;
-          }, 200);
+          socketObj.send(nextAvailableBlob.pop() as Blob);
+          socketSendCounter.current++;
         }
       });
     }
@@ -294,6 +295,7 @@ export function App() {
           justifyContent: 'space-around',
           minHeight: '100vh',
           backgroundColor: 'rgba(244,244,105,0.1)',
+          maxWidth: 'sm',
         }}
         disableGutters
       >
