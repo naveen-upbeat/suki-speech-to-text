@@ -201,7 +201,7 @@ export function App() {
         three2FiveSecondCounter
       );
       if (
-        (three2FiveSecondCounter > 3 &&
+        (three2FiveSecondCounter >= 3 &&
           three2FiveSecondCounter < 6 &&
           isSpeechPaused(audioDataForAnalyzer?.data)) ||
         three2FiveSecondCounter >= 6

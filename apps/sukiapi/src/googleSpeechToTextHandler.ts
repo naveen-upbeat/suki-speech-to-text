@@ -1,5 +1,4 @@
 import speech from '@google-cloud/speech';
-// import type AudioEncoding from '@google-cloud/speech';
 const client = new speech.SpeechClient();
 
 async function handleGoogleSpeechToText({ content }) {
@@ -18,6 +17,29 @@ async function handleGoogleSpeechToText({ content }) {
     audio: audio,
     config: config,
   };
+
+  // load the environment variable with our keys
+  const keysEnvVar = process.env['CREDS'];
+  if (keysEnvVar) {
+    const encodedText = Buffer.from(keysEnvVar, 'base64');
+    // console.log(`ec: ${encodedText}, dec: ${decodedJsonText}`);
+    // console.log('ecs', `${encodedText}`.replace(/\n/g, '\\n'));
+    const plainText = `${encodedText}`;
+    const partialText1 =
+      plainText.substring(0, 133) + plainText.substring(1856);
+    const partialText2 = `{${plainText.substring(134, 1855)}}`;
+    // console.log(partialText1, partialText2);
+    const partialTextReplaceNewLine = partialText2.replace(/\n/g, '\\n');
+
+    const partialJson1 = JSON.parse(partialText1);
+    const partialJson2 = JSON.parse(partialTextReplaceNewLine);
+
+    const parsedKey = { ...partialJson1, ...partialJson2 };
+
+    // console.log(`parsedKey: ${JSON.stringify(parsedKey)}`);
+    //throw new Error('The $CREDS environment variable was not found!');
+    client.auth.fromJSON(parsedKey);
+  }
 
   // Detects speech in the audio file
   const [response] = await client.recognize(request);

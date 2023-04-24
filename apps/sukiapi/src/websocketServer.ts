@@ -1,13 +1,11 @@
-import WebSocket from 'ws';
+import { WebSocketServer } from 'ws';
 import handleGoogleSpeechToText from './googleSpeechToTextHandler';
 
 export default async (expressServer) => {
-  const websocketServer = new WebSocket.Server({
+  const websocketServer = new WebSocketServer({
     noServer: true,
-    // server: expressServer,
     path: '/ws',
     verifyClient: (info: any, done) => {
-      //console.log('client info', info);
       done(true);
     },
   });
@@ -28,6 +26,8 @@ export default async (expressServer) => {
         if (isBinary) {
           console.log('blob object', message);
           transcription = await handleGoogleSpeechToText({ content: message });
+        } else {
+          console.log('not a blog object, sorry no transcription');
         }
 
         websocketConnection.send(
