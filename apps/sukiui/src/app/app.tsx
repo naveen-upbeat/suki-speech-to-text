@@ -311,7 +311,6 @@ export function App() {
           justifyContent: 'space-around',
           minHeight: '100vh',
           backgroundColor: 'rgba(244,244,105,0.1)',
-          maxWidth: 'sm',
         }}
         disableGutters
       >
@@ -339,10 +338,8 @@ export function App() {
         <Container
           sx={{
             ...flexColumn,
-            flex: '0 0 80%',
             justifyContent: 'center',
             gap: '30px',
-            maxWidth: 'sm',
             boxShadow: '2px 1px 20px gray',
             backgroundColor: '#fff',
             marginTop: '75px',
@@ -350,6 +347,7 @@ export function App() {
             borderBottomRightRadius: '24px',
             borderTopLeftRadius: '24px',
           }}
+          maxWidth="sm"
         >
           <Typography
             sx={{

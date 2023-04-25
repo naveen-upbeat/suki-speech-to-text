@@ -13,6 +13,7 @@ WORKDIR /app
 # Set production environment
 ENV NODE_ENV=production
 ENV FLY_HOST=floral-haze-4013.fly.dev
+ENV GOOGLE_APPLICATION_CREDENTIALS=/app/suki-pvt-key.json
 
 # Throw-away build stage to reduce size of final image
 FROM base as build
@@ -39,5 +40,4 @@ FROM base
 COPY --from=build /app /app
 
 # Start the server by default, this can be overwritten at runtime
-CMD ["npm", "run", "build"]
 CMD [ "npm", "run", "start" ]
