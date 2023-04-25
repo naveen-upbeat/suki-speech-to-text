@@ -2,7 +2,12 @@ import express from 'express';
 import websocketServer from './websocketServer';
 import path from 'path';
 
-const host = process.env.HOST ?? 'localhost';
+const host =
+  process.env.HOST ?? process.env.NODE_ENV
+    ? process.env.NODE_ENV === 'PRODUCTION'
+      ? '0.0.0.0'
+      : 'localhost'
+    : 'localhost';
 const port = process.env.PORT ? Number(process.env.PORT) : 3000;
 
 const CLIENT_BUILD_PATH = path.join(__dirname, '../sukiui');

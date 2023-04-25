@@ -51,7 +51,12 @@ const appDebugLogger = new ConsoleLogger(currentEnvironments.isDebugEnabled);
 export const isRecording = (status: string) =>
   status === RECORDING_STATUS.recording;
 
-const host = process.env.HOST ?? 'localhost';
+const host =
+  process.env.HOST ?? process.env.NODE_ENV
+    ? process.env.NODE_ENV === 'PRODUCTION'
+      ? '0.0.0.0'
+      : 'localhost'
+    : 'localhost';
 const port = process.env.PORT ? Number(process.env.PORT) : 3000;
 
 export function App() {
