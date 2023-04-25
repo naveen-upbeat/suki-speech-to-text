@@ -53,7 +53,7 @@ export const isRecording = (status: string) =>
 
 const host =
   process.env.HOST ?? process.env.NODE_ENV
-    ? process.env.NODE_ENV === 'PRODUCTION'
+    ? process.env.NODE_ENV === 'production'
       ? '0.0.0.0'
       : 'localhost'
     : 'localhost';
