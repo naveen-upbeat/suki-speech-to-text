@@ -9,6 +9,8 @@ import {
   Toolbar,
   Typography,
 } from '@mui/material';
+import ToggleButton from '@mui/material/ToggleButton';
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import MenuIcon from '@mui/icons-material/Menu';
 import RecordVoiceOverIcon from '@mui/icons-material/RecordVoiceOver';
 import {
@@ -22,7 +24,11 @@ import Recorder from '../util/recorderUtils';
 import ListeningModal from '../components/ListeningModal';
 import AudioClips from '../components/AudioClips';
 import SukiLogo from '../assets/logo.png';
-import { resolveCurrentEnvironments } from '../util/environmentUtils';
+import {
+  LOCAL_HOST,
+  evaluateHostBasedOnEnvironment,
+  resolveCurrentEnvironments,
+} from '../util/environmentUtils';
 import { ConsoleLogger } from '../util/loggerUtil';
 import AskMicPermissions from '../components/AskMicPermission';
 import MicrophoneRecordingStartStop from '../components/MicrophoneRecordingStartStop';
@@ -36,10 +42,13 @@ import AppFooter from '../components/AppFooter';
 import DebugDrawerBottom from '../components/DebugDrawerBottom';
 import TranscriptionTextField from '../components/TranscriptionTextField';
 import { isSpeechPaused } from '../util/soundAnalyserUtils';
+import { RECORDING_STATUS, isRecording } from '../util/recordingStateUtils';
+import useSmartSplitForRecording from '../hooks/useSmartSplitForRecording';
 
-export const RECORDING_STATUS = {
-  recording: 'RECORDING',
-  inactive: 'INACTIVE',
+export const RECORD_MODE = {
+  batch: 'batch',
+  stream: 'stream',
+  longrunning: 'longrunning',
 };
 
 const AUTO_STOP_RECORDING_TIMEOUT = 12000; // auto stop recording in 10 seconds
@@ -48,29 +57,19 @@ const currentEnvironments = resolveCurrentEnvironments();
 
 const appDebugLogger = new ConsoleLogger(currentEnvironments.isDebugEnabled);
 
-const LOCALHOST = 'localhost';
-export const isRecording = (status: string) =>
-  status === RECORDING_STATUS.recording;
-
-console.log(`env: ${process.env.NODE_ENV}, ${process.env['NODE_ENV']}`);
-console.log(`hosts:${process.env['FLY_HOST']}, ${process.env.FLY_HOST}`);
-const host =
-  process.env.HOST ?? process.env.NODE_ENV
-    ? process.env.NODE_ENV === 'production'
-      ? process.env['FLY_HOST'] ?? window.location.hostname
-      : LOCALHOST
-    : LOCALHOST;
+const host = evaluateHostBasedOnEnvironment();
 const port = process.env.PORT ? Number(process.env.PORT) : 3000;
 
 const protocolForWebsocket =
   window.location.protocol === 'https:' ? 'wss' : 'ws';
 
 function generateWebSocketAddress() {
-  const portSuffix = host !== LOCALHOST ? '' : `:${port}`;
+  const portSuffix = host !== LOCAL_HOST ? '' : `:${port}`;
   return `${protocolForWebsocket}://${host}${portSuffix}/ws`;
 }
 
 export function App() {
+  const [transcribeMode, setTranscribeMode] = useState(RECORD_MODE.batch);
   const [hasPermissionForMic, setMicrophonePermission] = useState(false);
   const [audioDataForAnalyzer, setAudioDataForAnalyzer] = useState({
     data: [],
@@ -81,9 +80,8 @@ export function App() {
   const [recordingStatus, setRecordingStatus] = useState(
     RECORDING_STATUS.inactive
   );
-  const [shouldStopProcessBatching, setStopProcessBatching] = useState<
-    boolean | null
-  >(null);
+  const [isCurrentRecordingMarkedForSplit, markCurrentRecordingForSplit] =
+    useState<boolean | null>(null);
 
   const [autoStopRecording, setAutoStopRecording] = useState<number>(
     AUTO_STOP_RECORDING_TIMEOUT / 1000
@@ -99,7 +97,7 @@ export function App() {
 
   const [isDebugDrawerOpen, setDebugDrawOpen] = useState(false);
 
-  const getMicrophonePermission = async () => {
+  const onMicPermissionClickHandler = async () => {
     if ('MediaRecorder' in window) {
       try {
         const streamData = await navigator.mediaDevices.getUserMedia({
@@ -118,6 +116,7 @@ export function App() {
             setAudioDataForAnalyzer(data);
           },
         });
+
         recorderRef.current?.init(streamData);
       } catch (err: unknown) {
         setMicrophonePermission(false);
@@ -135,12 +134,12 @@ export function App() {
   };
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const stopRecordingProcess = () => {
-    setStopProcessBatching(true);
+  const splitRecordingForBatchProcess = () => {
+    markCurrentRecordingForSplit(true);
   };
 
-  const startRecordingProcess = () => {
-    setStopProcessBatching(false);
+  const postSplitStartNewRecording = () => {
+    markCurrentRecordingForSplit(false);
   };
 
   const startRecording = useCallback(() => {
@@ -201,46 +200,54 @@ export function App() {
     socketConnectionRef.current = socket;
   }, [audioContextRef]);
 
-  const [three2FiveSecondCounter, setThree2FiveSecondCounter] = useState(0);
-  useEffect(() => {
-    let timer: any = false;
-    if (three2FiveSecondCounter >= 0) {
-      timer = setInterval(
-        () => setThree2FiveSecondCounter(three2FiveSecondCounter + 1),
-        1000
-      );
-    }
-    if (
-      (shouldStopProcessBatching === null ||
-        shouldStopProcessBatching === false) &&
-      isRecording(recordingStatus)
-    ) {
-      appDebugLogger.log(
-        'Awaiting a recording split:',
-        three2FiveSecondCounter
-      );
-      if (
-        (three2FiveSecondCounter >= 3 &&
-          three2FiveSecondCounter < 6 &&
-          isSpeechPaused(audioDataForAnalyzer?.data)) ||
-        three2FiveSecondCounter >= 6
-      ) {
-        stopRecordingProcess();
-        setThree2FiveSecondCounter(0);
-      }
-    }
+  // const [three2FiveSecondCounter, setThree2FiveSecondCounter] = useState(0);
+  // useEffect(() => {
+  //   let timer: any = false;
+  //   if (three2FiveSecondCounter >= 0) {
+  //     timer = setInterval(
+  //       () => setThree2FiveSecondCounter(three2FiveSecondCounter + 1),
+  //       1000
+  //     );
+  //   }
+  //   if (
+  //     (isCurrentRecordingMarkedForSplit === null ||
+  //       isCurrentRecordingMarkedForSplit === false) &&
+  //     isRecording(recordingStatus)
+  //   ) {
+  //     appDebugLogger.log(
+  //       'Awaiting a recording split:',
+  //       three2FiveSecondCounter
+  //     );
+  //     if (
+  //       (three2FiveSecondCounter >= 3 &&
+  //         three2FiveSecondCounter < 6 &&
+  //         isSpeechPaused(audioDataForAnalyzer?.data)) ||
+  //       three2FiveSecondCounter >= 6
+  //     ) {
+  //       splitRecordingForBatchProcess();
+  //       setThree2FiveSecondCounter(0);
+  //     }
+  //   }
 
-    return () => clearInterval(timer);
-  }, [three2FiveSecondCounter]);
+  //   return () => clearInterval(timer);
+  // }, [three2FiveSecondCounter]);
+
+  useSmartSplitForRecording({
+    recordingStatus,
+    isCurrentRecordingMarkedForSplit,
+    audioDataForAnalyzer,
+    splitRecordingForBatchProcess,
+    appDebugLogger,
+  });
 
   useEffect(() => {
     appDebugLogger.log(
-      `recording status: ${recordingStatus}, recording batching: ${shouldStopProcessBatching}, Socket Data Received: ${socketDataReceivedRef.current.join(
+      `recording status: ${recordingStatus}, recording batching: ${isCurrentRecordingMarkedForSplit}, Socket Data Received: ${socketDataReceivedRef.current.join(
         ' '
       )}`
     );
 
-    if (shouldStopProcessBatching) {
+    if (isCurrentRecordingMarkedForSplit) {
       appDebugLogger.log(
         'stopping recording processess at',
         new Date().getSeconds()
@@ -259,7 +266,7 @@ export function App() {
         );
 
         if (isRecording(recordingStatus)) {
-          startRecordingProcess();
+          postSplitStartNewRecording();
         }
 
         if (socketSendQueueObj.length > 0) {
@@ -270,7 +277,10 @@ export function App() {
       });
     }
 
-    if (shouldStopProcessBatching === false && isRecording(recordingStatus)) {
+    if (
+      isCurrentRecordingMarkedForSplit === false &&
+      isRecording(recordingStatus)
+    ) {
       appDebugLogger.log(
         'Started another recording process at',
         new Date().getSeconds()
@@ -291,7 +301,7 @@ export function App() {
           appDebugLogger.log('Error recording', err);
         });
     }
-  }, [recordingStatus, shouldStopProcessBatching]);
+  }, [recordingStatus, isCurrentRecordingMarkedForSplit]);
 
   const clearMessages = () => {
     socketDataReceivedRef.current = [];
@@ -362,8 +372,34 @@ export function App() {
           <Divider sx={{ marginTop: '-10px' }} />
           <AskMicPermissions
             hasPermissionForMic={hasPermissionForMic}
-            handlers={{ getMicrophonePermission }}
+            handlers={{ getMicrophonePermission: onMicPermissionClickHandler }}
           />
+          <Box
+            sx={{
+              ...displayFlexRow,
+              ...allCenter,
+              justifyContent: 'space-around',
+            }}
+          >
+            <Typography sx={{ fontWeight: 'bold' }}>
+              Transcription mode:
+            </Typography>
+            <ToggleButtonGroup
+              color="primary"
+              value={transcribeMode}
+              exclusive
+              onChange={(e, mode) => setTranscribeMode(mode)}
+              aria-label="Platform"
+            >
+              <ToggleButton value={RECORD_MODE.batch}>Batch</ToggleButton>
+              <ToggleButton value={RECORD_MODE.stream} disabled>
+                Stream
+              </ToggleButton>
+              <ToggleButton value={RECORD_MODE.longrunning} disabled>
+                Long Running
+              </ToggleButton>
+            </ToggleButtonGroup>
+          </Box>
           <MicrophoneRecordingStartStop
             hasPermissionForMic={hasPermissionForMic}
             recordingStatus={recordingStatus}

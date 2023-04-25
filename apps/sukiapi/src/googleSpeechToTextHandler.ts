@@ -1,7 +1,7 @@
 import speech from '@google-cloud/speech';
 const client = new speech.SpeechClient();
 
-async function handleGoogleSpeechToText({ content }) {
+async function handleGoogleSpeechToTextAsync({ content }) {
   // The path to the remote LINEAR16 file stored in Google Cloud Storage
 
   // The audio file's encoding, sample rate in hertz, and BCP-47 language code
@@ -29,4 +29,8 @@ async function handleGoogleSpeechToText({ content }) {
   return transcription;
 }
 
-export default handleGoogleSpeechToText;
+function recognizeStream(){
+  
+}
+
+export default handleGoogleSpeechToTextAsync;

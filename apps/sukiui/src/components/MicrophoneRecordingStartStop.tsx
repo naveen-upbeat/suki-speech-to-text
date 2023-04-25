@@ -3,7 +3,7 @@ import MicTwoToneIcon from '@mui/icons-material/MicTwoTone';
 import StopCircleTwoToneIcon from '@mui/icons-material/StopCircleTwoTone';
 
 import { ReactEventHandler } from 'react';
-import { isRecording } from '../app/app';
+import { isRecording } from '../util/recordingStateUtils';
 
 export type MicrophoneRecordingStartStopProps = {
   hasPermissionForMic: boolean;

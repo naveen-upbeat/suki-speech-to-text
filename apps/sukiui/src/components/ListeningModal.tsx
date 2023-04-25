@@ -4,7 +4,7 @@ import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 
 import { Container, Typography } from '@mui/material';
-import { isRecording } from '../app/app';
+import { isRecording } from '../util/recordingStateUtils';
 import {
   alignJustifyItemsCenter,
   allCenter,
