@@ -48,16 +48,27 @@ const currentEnvironments = resolveCurrentEnvironments();
 
 const appDebugLogger = new ConsoleLogger(currentEnvironments.isDebugEnabled);
 
+const LOCALHOST = 'localhost';
 export const isRecording = (status: string) =>
   status === RECORDING_STATUS.recording;
 
+console.log(`env: ${process.env.NODE_ENV}, ${process.env['NODE_ENV']}`);
+console.log(`hosts:${process.env['FLY_HOST']}, ${process.env.FLY_HOST}`);
 const host =
   process.env.HOST ?? process.env.NODE_ENV
     ? process.env.NODE_ENV === 'production'
-      ? '0.0.0.0'
-      : 'localhost'
-    : 'localhost';
+      ? process.env['FLY_HOST'] ?? window.location.hostname
+      : LOCALHOST
+    : LOCALHOST;
 const port = process.env.PORT ? Number(process.env.PORT) : 3000;
+
+const protocolForWebsocket =
+  window.location.protocol === 'https:' ? 'wss' : 'ws';
+
+function generateWebSocketAddress() {
+  const portSuffix = host !== LOCALHOST ? '' : `:${port}`;
+  return `${protocolForWebsocket}://${host}${portSuffix}/ws`;
+}
 
 export function App() {
   const [hasPermissionForMic, setMicrophonePermission] = useState(false);
@@ -156,7 +167,7 @@ export function App() {
   };
 
   useLayoutEffect(() => {
-    const socket = new WebSocket(`ws://${host}:${port}/ws`);
+    const socket = new WebSocket(generateWebSocketAddress());
 
     socket.onmessage = function (e) {
       const latestTranscriptionData = e.data

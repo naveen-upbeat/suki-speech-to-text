@@ -38,7 +38,7 @@ async function handleGoogleSpeechToText({ content }) {
 
     // console.log(`parsedKey: ${JSON.stringify(parsedKey)}`);
     //throw new Error('The $CREDS environment variable was not found!');
-    client.auth.fromJSON(parsedKey);
+    client.auth.cachedCredential = client.auth.fromJSON(parsedKey);
   }
 
   // Detects speech in the audio file
