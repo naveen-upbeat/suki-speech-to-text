@@ -10,7 +10,7 @@ const host =
     : 'localhost';
 const port = process.env.PORT ? Number(process.env.PORT) : 3000;
 
-const CLIENT_BUILD_PATH = path.join(__dirname, './../../../../sukiui');
+const CLIENT_BUILD_PATH = path.join(__dirname, '../sukiui');
 
 const app = express();
 app.use(express.static(CLIENT_BUILD_PATH));

@@ -30,8 +30,8 @@ import {
   resolveCurrentEnvironments,
 } from '../util/environmentUtils';
 import { ConsoleLogger } from '../util/loggerUtil';
-import AskMicPermissions from '../components/AskMicPermission';
-import MicrophoneRecordingStartStop from '../components/MicrophoneRecordingStartStop';
+import AskMicPermissionsButton from '../components/AskMicPermissionButton';
+import MicRecordingStartStopButtons from '../components/MicRecordingStartStopButtons';
 import {
   alignJustifyItemsCenter,
   allCenter,
@@ -48,6 +48,7 @@ import {
   WEB_SOCKET_BATCH_PATH,
   WEB_SOCKET_STREAM_PATH,
 } from '@suki-speech-to-text/suki-api-configs';
+// import { WebSocket } from 'ws';
 
 export const RECORD_MODE = {
   batch: 'batch',
@@ -74,6 +75,11 @@ function generateWebSocketAddressForBatching() {
   return `${protocolForWebsocket}://${host}${portSuffix}${WEB_SOCKET_BATCH_PATH}`;
 }
 
+function generateWebSocketAddressForStreaming() {
+  const portSuffix = host !== LOCAL_HOST ? '' : `:${port}`;
+  return `${protocolForWebsocket}://${host}${portSuffix}${WEB_SOCKET_STREAM_PATH}`;
+}
+
 export function App() {
   const [transcribeMode, setTranscribeMode] = useState(RECORD_MODE.batch);
   const [hasPermissionForMic, setMicrophonePermission] = useState(false);
@@ -81,7 +87,9 @@ export function App() {
     data: [],
   });
   const audioContextRef = useRef<AudioContext | null>(null);
+  const streamAudioContextRef = useRef<AudioContext | null>(null);
   const recorderRef = useRef<Recorder | null>(null);
+  const pcmWorkerRef = useRef<AudioWorkletNode | null>(null);
 
   const [recordingStatus, setRecordingStatus] = useState(
     RECORDING_STATUS.inactive
@@ -94,7 +102,9 @@ export function App() {
   );
 
   const socketConnectionRef = useRef<WebSocket | null>(null);
+  const streamSocketConnectionRef = useRef<WebSocket | null>(null);
   const socketDataReceivedRef = useRef<string[]>([]);
+  const streamSocketDataReceivedRef = useRef<string[]>([]);
   const socketMessageSendQueue = useRef<Blob[]>([]);
   const [socketMessageSendQueueState, setSocketSendQueue] = useState<Blob[]>(
     []
@@ -103,7 +113,7 @@ export function App() {
 
   const [isDebugDrawerOpen, setDebugDrawOpen] = useState(false);
 
-  const onMicPermissionClickHandler = async () => {
+  const batchModeMicPermissionHandler = async () => {
     if ('MediaRecorder' in window) {
       try {
         const streamData = await navigator.mediaDevices.getUserMedia({
@@ -116,7 +126,9 @@ export function App() {
           video: false,
         });
         setMicrophonePermission(true);
-        audioContextRef.current = new window.AudioContext();
+        audioContextRef.current = new window.AudioContext({
+          sampleRate: SAMPLE_RATE,
+        });
         recorderRef.current = new Recorder(audioContextRef.current, {
           numChannels: 1,
           sampleRate: SAMPLE_RATE,
@@ -144,6 +156,64 @@ export function App() {
     }
   };
 
+  const streamModeMicPermissionHandler = async () => {
+    if ('MediaRecorder' in window) {
+      try {
+        const streamRecognizeMedia = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            deviceId: 'default',
+            sampleRate: SAMPLE_RATE,
+            sampleSize: 16,
+            channelCount: 1,
+          },
+          video: false,
+        });
+        setMicrophonePermission(true);
+        if (!streamAudioContextRef.current) {
+          streamAudioContextRef.current = new window.AudioContext({
+            sampleRate: SAMPLE_RATE,
+          });
+          await streamAudioContextRef.current.audioWorklet.addModule(
+            '/audioWorker.js'
+          );
+
+          pcmWorkerRef.current = new AudioWorkletNode(
+            streamAudioContextRef.current,
+            'audio-pcm-worker',
+            {
+              outputChannelCount: [1],
+            }
+          );
+
+          const webAudioSource: MediaStreamAudioSourceNode =
+            streamAudioContextRef.current.createMediaStreamSource(
+              streamRecognizeMedia
+            );
+          webAudioSource.connect(pcmWorkerRef.current);
+        }
+      } catch (err: unknown) {
+        setMicrophonePermission(false);
+        if (typeof err === 'object' && err !== null) {
+          appDebugLogger.error('message' in err ? err.message : '');
+        } else {
+          appDebugLogger.error(err);
+        }
+      }
+    } else {
+      appDebugLogger.info(
+        'The MediaRecorder API is not supported in your browser.'
+      );
+    }
+  };
+
+  const onMicPermissionClickHandler = async () => {
+    if (transcribeMode === RECORD_MODE.batch) {
+      batchModeMicPermissionHandler();
+    } else if (transcribeMode === RECORD_MODE.stream) {
+      streamModeMicPermissionHandler();
+    }
+  };
+
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const splitRecordingForBatchProcess = () => {
     markCurrentRecordingForSplit(true);
@@ -153,7 +223,7 @@ export function App() {
     markCurrentRecordingForSplit(false);
   };
 
-  const startRecording = useCallback(() => {
+  const batchRecordingStart = useCallback(() => {
     clearMessages();
     setRecordingStatus((_currentStatus) => RECORDING_STATUS.recording);
     const recorder = recorderRef.current as Recorder;
@@ -172,16 +242,56 @@ export function App() {
       });
   }, [recordingStatus, setRecordingStatus]);
 
-  const stopRecording = () => {
+  const streamRecordingStart = useCallback(() => {
+    clearMessages();
+    setRecordingStatus((_currentStatus) => RECORDING_STATUS.recording);
+    const pcmWorker = pcmWorkerRef.current as AudioWorkletNode;
+    if (pcmWorker) {
+      if (!pcmWorker.port.onmessage) {
+        pcmWorker.port.onmessage = (evt: any) => {
+          const streamSocket = streamSocketConnectionRef.current as WebSocket;
+          streamSocket.send(evt.data);
+        };
+      }
+      pcmWorker.port?.start();
+    } else {
+      console.log('PCM worker is null');
+    }
+  }, [recordingStatus, setRecordingStatus]);
+
+  const startRecording = useCallback(() => {
+    if (transcribeMode === RECORD_MODE.batch) {
+      batchRecordingStart();
+    } else if (transcribeMode === RECORD_MODE.stream) {
+      streamRecordingStart();
+    }
+  }, [recordingStatus, setRecordingStatus, transcribeMode]);
+
+  const stopBatchRecording = () => {
     setRecordingStatus(RECORDING_STATUS.inactive);
+  };
+
+  const stopStreamRecording = () => {
+    const pcmWorker = pcmWorkerRef.current as AudioWorkletNode;
+    pcmWorker.port?.close();
+    setRecordingStatus(RECORDING_STATUS.inactive);
+  };
+
+  const stopRecording = () => {
+    if (transcribeMode === RECORD_MODE.batch) {
+      stopBatchRecording();
+    } else if (transcribeMode === RECORD_MODE.stream) {
+      stopStreamRecording();
+    }
   };
 
   useLayoutEffect(() => {
     const socket = new WebSocket(generateWebSocketAddressForBatching());
+    const streamSocket = new WebSocket(generateWebSocketAddressForStreaming());
 
     socket.onmessage = function (e) {
       const latestTranscriptionData = e.data
-        ? JSON.parse(e.data)?.transcription
+        ? JSON.parse(e.data.toString())?.transcription
         : '';
       appDebugLogger.log(
         'Existing data received from socket',
@@ -208,7 +318,18 @@ export function App() {
       socket.send(JSON.stringify({ hey: 'hello' }));
     };
 
+    streamSocket.onmessage = function (e) {
+      const latestTranscriptionData = e.data
+        ? JSON.parse(e.data)?.transcription
+        : '';
+      console.log('Stream transcription:', latestTranscriptionData);
+      const streamSocketDataReceived =
+        streamSocketDataReceivedRef.current as string[];
+      streamSocketDataReceived.push(latestTranscriptionData);
+    };
+
     socketConnectionRef.current = socket;
+    streamSocketConnectionRef.current = streamSocket;
   }, [audioContextRef]);
 
   // const [three2FiveSecondCounter, setThree2FiveSecondCounter] = useState(0);
@@ -249,6 +370,7 @@ export function App() {
     audioDataForAnalyzer,
     splitRecordingForBatchProcess,
     appDebugLogger,
+    transcribeMode,
   });
 
   useEffect(() => {
@@ -395,23 +517,30 @@ export function App() {
               color="primary"
               value={transcribeMode}
               exclusive
-              onChange={(e, mode) => setTranscribeMode(mode)}
+              onChange={(e, mode) => {
+                if (!mode) {
+                  setTranscribeMode(RECORD_MODE.batch);
+                } else {
+                  setTranscribeMode(mode);
+                }
+                if (mode && transcribeMode !== mode) {
+                  setMicrophonePermission(false);
+                }
+              }}
               aria-label="Platform"
             >
               <ToggleButton value={RECORD_MODE.batch}>Batch</ToggleButton>
-              <ToggleButton value={RECORD_MODE.stream} disabled>
-                Stream
-              </ToggleButton>
+              <ToggleButton value={RECORD_MODE.stream}>Stream</ToggleButton>
               <ToggleButton value={RECORD_MODE.longrunning} disabled>
                 Long Running
               </ToggleButton>
             </ToggleButtonGroup>
           </Box>
-          <AskMicPermissions
+          <AskMicPermissionsButton
             hasPermissionForMic={hasPermissionForMic}
             handlers={{ getMicrophonePermission: onMicPermissionClickHandler }}
           />
-          <MicrophoneRecordingStartStop
+          <MicRecordingStartStopButtons
             hasPermissionForMic={hasPermissionForMic}
             recordingStatus={recordingStatus}
             handlers={{
@@ -420,7 +549,11 @@ export function App() {
             }}
           />
           <TranscriptionTextField
-            transcriptionsArray={socketDataReceivedRef.current}
+            transcriptionsArray={
+              transcribeMode === RECORD_MODE.batch
+                ? socketDataReceivedRef.current
+                : streamSocketDataReceivedRef.current
+            }
             minRows={4}
           />
           <Box
@@ -464,8 +597,13 @@ export function App() {
               ...alignJustifyItemsCenter,
             }}
           >
-            <AudioClips socketMessageQueueState={socketMessageSendQueueState} />
-            Total messages sent over socket: {socketSendCounter.current}
+            <AudioClips
+              socketMessageQueueState={socketMessageSendQueueState}
+              transcriptionsArray={socketDataReceivedRef.current}
+            />
+            <Typography>
+              Total messages sent over socket: {socketSendCounter.current}
+            </Typography>
           </Container>
         </DebugDrawerBottom>
         <AppFooter />

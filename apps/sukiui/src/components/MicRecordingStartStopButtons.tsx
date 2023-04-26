@@ -14,7 +14,7 @@ export type MicrophoneRecordingStartStopProps = {
   };
 };
 
-const MicrophoneRecordingStartStop = ({
+const MicRecordingStartStopButtons = ({
   hasPermissionForMic,
   recordingStatus,
   handlers,
@@ -42,4 +42,4 @@ const MicrophoneRecordingStartStop = ({
   return <> </>;
 };
 
-export default MicrophoneRecordingStartStop;
+export default MicRecordingStartStopButtons;

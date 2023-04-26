@@ -9,13 +9,14 @@ export type AskMicPermissionsProps = {
   };
 };
 
-const AskMicPermissions = ({
+const AskMicPermissionsButton = ({
   hasPermissionForMic,
   handlers,
 }: AskMicPermissionsProps) => {
   if (!hasPermissionForMic) {
     return (
       <Button
+        onMouseOver={handlers.getMicrophonePermission}
         variant="contained"
         sx={{ display: 'flex', alignItems: 'center', gap: '15px' }}
         onClick={handlers.getMicrophonePermission}
@@ -28,4 +29,4 @@ const AskMicPermissions = ({
   }
 };
 
-export default AskMicPermissions;
+export default AskMicPermissionsButton;

@@ -50,7 +50,7 @@
     "@svgr/webpack": "^6.1.2",
     "@testing-library/react": "14.0.0",
     "@types/express": "~4.17.13",
-    "@types/jest": "^29.4.0",
+    "@types/jest": "^29.5.1",
     "@types/node": "18.14.2",
     "@types/query-string": "^6.3.0",
     "@types/react": "18.0.28",

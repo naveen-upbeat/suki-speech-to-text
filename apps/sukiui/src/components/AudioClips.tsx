@@ -1,12 +1,13 @@
-import { Container, Box } from '@mui/material';
+import { Container, Box, Typography } from '@mui/material';
 import React from 'react';
 
 export type AudioClipsProps = {
   socketMessageQueueState: Blob[];
+  transcriptionsArray: string[];
 };
 
 const AudioClips = React.memo(
-  ({ socketMessageQueueState }: AudioClipsProps) => {
+  ({ socketMessageQueueState, transcriptionsArray }: AudioClipsProps) => {
     return (
       <Container sx={{ padding: '10px' }}>
         {socketMessageQueueState.map((bl: any, ind: number) => {
@@ -22,7 +23,6 @@ const AudioClips = React.memo(
             >
               <Box
                 sx={{
-                  flex: '0 0 30%',
                   justifyContent: 'right',
                   display: 'flex',
                 }}
@@ -32,12 +32,14 @@ const AudioClips = React.memo(
               </Box>
               <Box
                 sx={{
-                  flex: '0 0 60%',
                   justifyContent: 'left',
                   display: 'flex',
                 }}
               >
                 <audio src={URL.createObjectURL(bl)} controls></audio>
+              </Box>
+              <Box sx={{ border: '1px solid #cecece' }}>
+                <Typography>{transcriptionsArray[ind] + ' '}</Typography>
               </Box>
             </Box>
           );

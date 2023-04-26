@@ -27,6 +27,9 @@ export default async (expressServer) => {
   const wsForStreamRecognize = new WebSocketServer({
     noServer: true,
     path: WEB_SOCKET_STREAM_PATH,
+    verifyClient: (info: any, done) => {
+      done(true);
+    },
   });
 
   websocketServer.on(
@@ -58,9 +61,15 @@ export default async (expressServer) => {
   );
 
   expressServer.on('upgrade', (request, socket, head) => {
-    websocketServer.handleUpgrade(request, socket, head, (websocket) => {
-      websocketServer.emit('connection', websocket, request);
-    });
+    if (request.url === WEB_SOCKET_BATCH_PATH) {
+      websocketServer.handleUpgrade(request, socket, head, (websocket) => {
+        websocketServer.emit('connection', websocket, request);
+      });
+    } else {
+      wsForStreamRecognize.handleUpgrade(request, socket, head, (websocket) => {
+        wsForStreamRecognize.emit('connection', websocket, request);
+      });
+    }
   });
 
   wsForStreamRecognize.on(
@@ -79,24 +88,23 @@ export default async (expressServer) => {
         console.log('Transcription data:', data);
         websocketConnection.send(
           JSON.stringify({
-            transcription: data,
+            transcription: data.results[0].alternatives[0].transcript,
           })
         );
       });
 
       websocketConnection.on('message', async (message: any, isBinary) => {
         if (isBinary) {
+          console.log('Stream binary', message);
           inputWaveStream.push(message);
+        } else {
+          console.log('Stream object:', message);
         }
       });
     }
   );
 
-  wsForStreamRecognize.on('upgrade', (request, socket, head) => {
-    wsForStreamRecognize.handleUpgrade(request, socket, head, (websocket) => {
-      wsForStreamRecognize.emit('connection', websocket, request);
-    });
-  });
+  // expressServer.on('upgrade', (request, socket, head) => {});
 
   return websocketServer;
 };

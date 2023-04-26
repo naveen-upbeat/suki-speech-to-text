@@ -13,7 +13,7 @@
         "platform": "node",
         "outputPath": "dist/apps/sukiapi",
         "format": ["cjs"],
-        "bundle": false,
+        "bundle": true,
         "main": "apps/sukiapi/src/main.ts",
         "tsConfig": "apps/sukiapi/tsconfig.app.json",
         "assets": ["apps/sukiapi/src/assets"],

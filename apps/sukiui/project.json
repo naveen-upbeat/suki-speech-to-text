@@ -15,7 +15,11 @@
         "baseHref": "/",
         "main": "apps/sukiui/src/main.tsx",
         "tsConfig": "apps/sukiui/tsconfig.app.json",
-        "assets": ["apps/sukiui/src/favicon.ico", "apps/sukiui/src/assets"],
+        "assets": [
+          "apps/sukiui/src/favicon.ico",
+          "apps/sukiui/src/assets",
+          "apps/sukiui/src/audioWorker.js"
+        ],
         "styles": [],
         "scripts": [],
         "isolatedConfig": true,

@@ -45,6 +45,7 @@ export function recognizeWaveStream(inputWaveBlobStream) {
       sampleRateHertz: 16000,
       languageCode: 'en-US',
     },
+    single_utterance: true,
     interimResults: false, // If you want interim results, set this to true
   };
 
@@ -57,17 +58,17 @@ export function recognizeWaveStream(inputWaveBlobStream) {
         console.error(err);
       })
       .on('data', (data) => {
-        this.console.log(
-          `Transcription: ${data.results[0].alternatives[0].transcript}`
-        );
+        // this.console.log(
+        //   `Transcription: ${data.results[0].alternatives[0].transcript}`
+        // );
         // outputTranscriptStream.push(data.results[0].alternatives[0].transcript);
       });
-      recognizeStream
-      // recognizeStream.on('data')
+
+    // recognizeStream.on('data')
   } catch (err) {
     console.log('Error making stream request', err);
   }
-  
+
   inputWaveBlobStream.pipe(recognizeStream);
 
   return recognizeStream;

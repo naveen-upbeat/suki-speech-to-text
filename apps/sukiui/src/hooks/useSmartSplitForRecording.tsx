@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { isRecording } from '../util/recordingStateUtils';
 import { isSpeechPaused } from '../util/soundAnalyserUtils';
+import { RECORD_MODE } from '../app/app';
 
 const useSmartSplitForRecording = ({
   recordingStatus,
@@ -8,6 +9,7 @@ const useSmartSplitForRecording = ({
   audioDataForAnalyzer,
   splitRecordingForBatchProcess,
   appDebugLogger,
+  transcribeMode,
 }: any) => {
   const [three2FiveSecondCounter, setThree2FiveSecondCounter] = useState(0);
 
@@ -22,7 +24,8 @@ const useSmartSplitForRecording = ({
     if (
       (isCurrentRecordingMarkedForSplit === null ||
         isCurrentRecordingMarkedForSplit === false) &&
-      isRecording(recordingStatus)
+      isRecording(recordingStatus) &&
+      transcribeMode === RECORD_MODE.batch
     ) {
       appDebugLogger.log(
         'Awaiting a recording split:',

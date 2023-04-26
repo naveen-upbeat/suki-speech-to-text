@@ -27,6 +27,8 @@ function getClientEnvironment() {
 module.exports = composePlugins(withNx(), withReact(), (config) => {
   // Update the webpack config as needed here.
   // e.g. `config.plugins.push(new MyPlugin())`
+  //config.entry.audioWorker = './src/util/audioWorker.js';
+  
   config.mode = process.env.NODE_ENV || config.mode;
   config.plugins.push(new webpack.DefinePlugin(getClientEnvironment()));
   return config;
