@@ -2,6 +2,7 @@ import WaveStream from 'react-wave-stream';
 import Modal from '@mui/material/Modal';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
+import StopCircleTwoToneIcon from '@mui/icons-material/StopCircleTwoTone';
 
 import { Container, Typography } from '@mui/material';
 import { isRecording } from '../util/recordingStateUtils';
@@ -54,7 +55,7 @@ const ListeningModal = ({
         1000
       );
     if (autoStopCounter === 0) {
-      handlers.stopRecording();
+      //handlers.stopRecording();
     }
     if (!isRecording(recordingStatus)) {
       setAutoStopCounter(autoStopAfterSeconds);
@@ -99,6 +100,8 @@ const ListeningModal = ({
             sx={{
               ...displayFlexRow,
               ...allCenter,
+              justifyContent: 'space-between',
+              padding: '5px',
             }}
           >
             <Typography variant="h6">Listening...{'    '}</Typography>
@@ -111,33 +114,49 @@ const ListeningModal = ({
                   Autostop in: {autoStopCounter}s{' '}
                 </Typography>
               )}
+            {isRecording(recordingStatus) && (
+              <Button
+                color="error"
+                variant="contained"
+                sx={{ zIndex: '1301' }}
+                onClick={handlers.stopRecording}
+              >
+                <StopCircleTwoToneIcon />
+              </Button>
+            )}
           </Box>
           {(autoStopCounter as number) < 5 &&
             (autoStopCounter as number) > -1 && (
               <Box
                 sx={{
                   ...displayFlexRow,
-                  justifyContent: 'center',
+                  ...allCenter,
                   marginTop: '5px',
                   gap: '5px',
+                  background: '#a3dbec',
+                  padding: '5px',
+                  boxShadow: 'inset 0 0 10px #000000',
                 }}
               >
+                <Typography sx={{ fontWeight: 'bold' }}>
+                  Add more seconds:
+                </Typography>
                 <Button
                   variant="contained"
                   color="info"
                   onClick={() => extendRecording(10)}
                 >
-                  Add 10s
+                  10
                 </Button>
                 <Button
                   variant="contained"
                   color="success"
                   onClick={() => extendRecording(15)}
                 >
-                  Add 15s
+                  15
                 </Button>
                 <Button variant="contained" onClick={() => extendRecording(20)}>
-                  Add 20s
+                  20
                 </Button>
               </Box>
             )}

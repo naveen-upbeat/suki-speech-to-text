@@ -14,7 +14,11 @@
     "skipLibCheck": true,
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
-    "paths": {}
+    "paths": {
+      "@suki-speech-to-text/suki-api-configs": [
+        "libs/suki-api-configs/src/index.ts"
+      ]
+    }
   },
   "exclude": ["node_modules", "tmp"]
 }

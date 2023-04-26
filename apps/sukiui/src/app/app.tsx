@@ -44,12 +44,18 @@ import TranscriptionTextField from '../components/TranscriptionTextField';
 import { isSpeechPaused } from '../util/soundAnalyserUtils';
 import { RECORDING_STATUS, isRecording } from '../util/recordingStateUtils';
 import useSmartSplitForRecording from '../hooks/useSmartSplitForRecording';
+import {
+  WEB_SOCKET_BATCH_PATH,
+  WEB_SOCKET_STREAM_PATH,
+} from '@suki-speech-to-text/suki-api-configs';
 
 export const RECORD_MODE = {
   batch: 'batch',
   stream: 'stream',
   longrunning: 'longrunning',
 };
+
+const SAMPLE_RATE = 16000;
 
 const AUTO_STOP_RECORDING_TIMEOUT = 12000; // auto stop recording in 10 seconds
 
@@ -63,9 +69,9 @@ const port = process.env.PORT ? Number(process.env.PORT) : 3000;
 const protocolForWebsocket =
   window.location.protocol === 'https:' ? 'wss' : 'ws';
 
-function generateWebSocketAddress() {
+function generateWebSocketAddressForBatching() {
   const portSuffix = host !== LOCAL_HOST ? '' : `:${port}`;
-  return `${protocolForWebsocket}://${host}${portSuffix}/ws`;
+  return `${protocolForWebsocket}://${host}${portSuffix}${WEB_SOCKET_BATCH_PATH}`;
 }
 
 export function App() {
@@ -101,14 +107,19 @@ export function App() {
     if ('MediaRecorder' in window) {
       try {
         const streamData = await navigator.mediaDevices.getUserMedia({
-          audio: true,
+          audio: {
+            deviceId: 'default',
+            sampleRate: SAMPLE_RATE,
+            sampleSize: 16,
+            channelCount: 1,
+          },
           video: false,
         });
         setMicrophonePermission(true);
         audioContextRef.current = new window.AudioContext();
         recorderRef.current = new Recorder(audioContextRef.current, {
           numChannels: 1,
-          sampleRate: 16000,
+          sampleRate: SAMPLE_RATE,
           // An array of 255 Numbers
           // You can use this to visualize the audio stream
           // If you use react, check out react-wave-stream
@@ -166,7 +177,7 @@ export function App() {
   };
 
   useLayoutEffect(() => {
-    const socket = new WebSocket(generateWebSocketAddress());
+    const socket = new WebSocket(generateWebSocketAddressForBatching());
 
     socket.onmessage = function (e) {
       const latestTranscriptionData = e.data
@@ -370,10 +381,6 @@ export function App() {
             <RecordVoiceOverIcon fontSize="large" /> Speech to Text
           </Typography>
           <Divider sx={{ marginTop: '-10px' }} />
-          <AskMicPermissions
-            hasPermissionForMic={hasPermissionForMic}
-            handlers={{ getMicrophonePermission: onMicPermissionClickHandler }}
-          />
           <Box
             sx={{
               ...displayFlexRow,
@@ -400,6 +407,10 @@ export function App() {
               </ToggleButton>
             </ToggleButtonGroup>
           </Box>
+          <AskMicPermissions
+            hasPermissionForMic={hasPermissionForMic}
+            handlers={{ getMicrophonePermission: onMicPermissionClickHandler }}
+          />
           <MicrophoneRecordingStartStop
             hasPermissionForMic={hasPermissionForMic}
             recordingStatus={recordingStatus}

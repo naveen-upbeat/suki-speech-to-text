@@ -27,7 +27,7 @@ const MicrophoneRecordingStartStop = ({
           {!isRecording(recordingStatus) ? 'Speak' : 'Listening...'}
         </Button>
 
-        {isRecording(recordingStatus) && (
+        {/* {isRecording(recordingStatus) && (
           <Button
             variant="contained"
             sx={{ zIndex: '1301' }}
@@ -35,7 +35,7 @@ const MicrophoneRecordingStartStop = ({
           >
             <StopCircleTwoToneIcon /> Stop
           </Button>
-        )}
+        )} */}
       </>
     );
   }

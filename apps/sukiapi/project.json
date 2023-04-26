@@ -13,7 +13,7 @@
         "platform": "node",
         "outputPath": "dist/apps/sukiapi",
         "format": ["cjs"],
-        "bundle": true,
+        "bundle": false,
         "main": "apps/sukiapi/src/main.ts",
         "tsConfig": "apps/sukiapi/tsconfig.app.json",
         "assets": ["apps/sukiapi/src/assets"],
@@ -38,7 +38,19 @@
       }
     },
     "serve": {
-      "command": "npx netlify dev"
+      "executor": "@nrwl/js:node",
+      "defaultConfiguration": "development",
+      "options": {
+        "buildTarget": "sukiapi:build"
+      },
+      "configurations": {
+        "development": {
+          "buildTarget": "sukiapi:build:development"
+        },
+        "production": {
+          "buildTarget": "sukiapi:build:production"
+        }
+      }
     },
     "lint": {
       "executor": "@nrwl/linter:eslint",
@@ -60,10 +72,6 @@
           "codeCoverage": true
         }
       }
-    },
-    "deploy": {
-      "dependsOn": ["build", "lint"],
-      "command": "npx netlify deploy --prod-if-unlocked"
     }
   },
   "tags": []
