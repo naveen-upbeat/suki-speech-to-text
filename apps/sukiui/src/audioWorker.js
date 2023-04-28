@@ -16,6 +16,14 @@ class AudioProcessorForWebAudio extends AudioWorkletProcessor {
     this.frame = new Int16Array(
       audioFrameSamples * this.samplesPerFramePerChunk
     );
+    this.isPortEnabled = true;
+    this.port.onmessage = (e) => {
+      if (JSON.parse(e.data).shouldClosePort) {
+        this.isPortEnabled = false;
+      } else if (JSON.parse(e.data).shouldOpenPort) {
+        this.isPortEnabled = true;
+      }
+    };
   }
 
   process(inputs, outputs, parameters) {
@@ -27,10 +35,12 @@ class AudioProcessorForWebAudio extends AudioWorkletProcessor {
     this.sampleFrameCount = this.sampleFrameCount + 1;
 
     if (chunkSizeReached(this.sampleFrameCount, this.samplesPerFramePerChunk)) {
-      this.port.postMessage(this.frame);
+      if (this.isPortEnabled) {
+        this.port.postMessage(this.frame);
+      }
       this.sampleFrameCount = 0;
     }
-    
+
     return true;
   }
 }

@@ -54,4 +54,12 @@ function evaluateHostBasedOnEnvironment() {
   );
 }
 
-export { resolveCurrentEnvironments, evaluateHostBasedOnEnvironment };
+function getAPIServerPort() {
+  return process.env.PORT ? Number(process.env.PORT) : 3000;
+}
+
+export {
+  resolveCurrentEnvironments,
+  evaluateHostBasedOnEnvironment,
+  getAPIServerPort,
+};

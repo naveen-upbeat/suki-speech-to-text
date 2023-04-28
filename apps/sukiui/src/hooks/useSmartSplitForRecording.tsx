@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { isRecording } from '../util/recordingStateUtils';
+import { RECORD_MODE, isRecording } from '../util/recordingStateUtils';
 import { isSpeechPaused } from '../util/soundAnalyserUtils';
-import { RECORD_MODE } from '../app/app';
 
 const useSmartSplitForRecording = ({
   recordingStatus,
@@ -14,7 +13,7 @@ const useSmartSplitForRecording = ({
   const [three2FiveSecondCounter, setThree2FiveSecondCounter] = useState(0);
 
   useEffect(() => {
-    let smartSplitTimerControl: any = false;
+    let smartSplitTimerControl: NodeJS.Timer;
     if (three2FiveSecondCounter >= 0) {
       smartSplitTimerControl = setInterval(
         () => setThree2FiveSecondCounter(three2FiveSecondCounter + 1),

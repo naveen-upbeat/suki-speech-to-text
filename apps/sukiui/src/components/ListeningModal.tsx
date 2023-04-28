@@ -5,7 +5,11 @@ import Button from '@mui/material/Button';
 import StopCircleTwoToneIcon from '@mui/icons-material/StopCircleTwoTone';
 
 import { Container, Typography } from '@mui/material';
-import { isRecording } from '../util/recordingStateUtils';
+import {
+  RECORD_MODE,
+  isRecordModeBatch,
+  isRecording,
+} from '../util/recordingStateUtils';
 import {
   alignJustifyItemsCenter,
   allCenter,
@@ -20,6 +24,7 @@ export type ListeningModalProps = {
   handlers: { stopRecording: any };
   audioData: any;
   autoStopAfterSeconds?: number;
+  transcribeMode: (typeof RECORD_MODE)[keyof typeof RECORD_MODE];
 };
 
 const defaultProps: Partial<ListeningModalProps> = {
@@ -43,6 +48,7 @@ const ListeningModal = ({
   handlers,
   audioData,
   autoStopAfterSeconds = defaultProps.autoStopAfterSeconds,
+  transcribeMode,
 }: ListeningModalProps) => {
   const [autoStopCounter, setAutoStopCounter] = useState(autoStopAfterSeconds);
 
@@ -54,8 +60,8 @@ const ListeningModal = ({
         () => setAutoStopCounter((autoStopCounter as number) - 1),
         1000
       );
-    if (autoStopCounter === 0) {
-      //handlers.stopRecording();
+    if (autoStopCounter === 0 && isRecordModeBatch(transcribeMode)) {
+      handlers.stopRecording();
     }
     if (!isRecording(recordingStatus)) {
       setAutoStopCounter(autoStopAfterSeconds);
@@ -66,6 +72,9 @@ const ListeningModal = ({
   const extendRecording = (seconds: number) => {
     setAutoStopCounter((autoStopCounter as number) + seconds);
   };
+
+  const shouldShowAutoStopOptions = () =>
+    (autoStopCounter as number) < 5 && (autoStopCounter as number) > -1;
 
   return (
     <Modal
@@ -105,8 +114,8 @@ const ListeningModal = ({
             }}
           >
             <Typography variant="h6">Listening...{'    '}</Typography>
-            {(autoStopCounter as number) < 5 &&
-              (autoStopCounter as number) > -1 && (
+            {isRecordModeBatch(transcribeMode) &&
+              shouldShowAutoStopOptions() && (
                 <Typography
                   variant="subtitle1"
                   sx={{ animation: `${blinkKeyframes} 1s linear infinite` }}
@@ -118,48 +127,46 @@ const ListeningModal = ({
               <Button
                 color="error"
                 variant="contained"
-                sx={{ zIndex: '1301' }}
                 onClick={handlers.stopRecording}
               >
                 <StopCircleTwoToneIcon />
               </Button>
             )}
           </Box>
-          {(autoStopCounter as number) < 5 &&
-            (autoStopCounter as number) > -1 && (
-              <Box
-                sx={{
-                  ...displayFlexRow,
-                  ...allCenter,
-                  marginTop: '5px',
-                  gap: '5px',
-                  background: '#a3dbec',
-                  padding: '5px',
-                  boxShadow: 'inset 0 0 10px #000000',
-                }}
+          {isRecordModeBatch(transcribeMode) && shouldShowAutoStopOptions() && (
+            <Box
+              sx={{
+                ...displayFlexRow,
+                ...allCenter,
+                marginTop: '5px',
+                gap: '5px',
+                background: '#a3dbec',
+                padding: '5px',
+                boxShadow: 'inset 0 0 10px #000000',
+              }}
+            >
+              <Typography sx={{ fontWeight: 'bold' }}>
+                Add more seconds:
+              </Typography>
+              <Button
+                variant="contained"
+                color="info"
+                onClick={() => extendRecording(10)}
               >
-                <Typography sx={{ fontWeight: 'bold' }}>
-                  Add more seconds:
-                </Typography>
-                <Button
-                  variant="contained"
-                  color="info"
-                  onClick={() => extendRecording(10)}
-                >
-                  10
-                </Button>
-                <Button
-                  variant="contained"
-                  color="success"
-                  onClick={() => extendRecording(15)}
-                >
-                  15
-                </Button>
-                <Button variant="contained" onClick={() => extendRecording(20)}>
-                  20
-                </Button>
-              </Box>
-            )}
+                10
+              </Button>
+              <Button
+                variant="contained"
+                color="success"
+                onClick={() => extendRecording(15)}
+              >
+                15
+              </Button>
+              <Button variant="contained" onClick={() => extendRecording(20)}>
+                20
+              </Button>
+            </Box>
+          )}
           <Box
             sx={{
               position: 'relative',

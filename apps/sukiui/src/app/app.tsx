@@ -24,11 +24,7 @@ import Recorder from '../util/recorderUtils';
 import ListeningModal from '../components/ListeningModal';
 import AudioClips from '../components/AudioClips';
 import SukiLogo from '../assets/logo.png';
-import {
-  LOCAL_HOST,
-  evaluateHostBasedOnEnvironment,
-  resolveCurrentEnvironments,
-} from '../util/environmentUtils';
+import { resolveCurrentEnvironments } from '../util/environmentUtils';
 import { ConsoleLogger } from '../util/loggerUtil';
 import AskMicPermissionsButton from '../components/AskMicPermissionButton';
 import MicRecordingStartStopButtons from '../components/MicRecordingStartStopButtons';
@@ -37,24 +33,18 @@ import {
   allCenter,
   displayFlexRow,
   flexColumn,
+  whiteBackgroundDarkText,
 } from '../util/styleUtils';
 import AppFooter from '../components/AppFooter';
 import DebugDrawerBottom from '../components/DebugDrawerBottom';
 import TranscriptionTextField from '../components/TranscriptionTextField';
-import { isSpeechPaused } from '../util/soundAnalyserUtils';
-import { RECORDING_STATUS, isRecording } from '../util/recordingStateUtils';
-import useSmartSplitForRecording from '../hooks/useSmartSplitForRecording';
 import {
-  WEB_SOCKET_BATCH_PATH,
-  WEB_SOCKET_STREAM_PATH,
-} from '@suki-speech-to-text/suki-api-configs';
-// import { WebSocket } from 'ws';
-
-export const RECORD_MODE = {
-  batch: 'batch',
-  stream: 'stream',
-  longrunning: 'longrunning',
-};
+  RECORDING_STATUS,
+  RECORD_MODE,
+  isRecording,
+} from '../util/recordingStateUtils';
+import useSmartSplitForRecording from '../hooks/useSmartSplitForRecording';
+import { getWebsocketAddress } from '../util/urlUtils';
 
 const SAMPLE_RATE = 16000;
 
@@ -64,22 +54,6 @@ const currentEnvironments = resolveCurrentEnvironments();
 
 const appDebugLogger = new ConsoleLogger(currentEnvironments.isDebugEnabled);
 
-const host = evaluateHostBasedOnEnvironment();
-const port = process.env.PORT ? Number(process.env.PORT) : 3000;
-
-const protocolForWebsocket =
-  window.location.protocol === 'https:' ? 'wss' : 'ws';
-
-function generateWebSocketAddressForBatching() {
-  const portSuffix = host !== LOCAL_HOST ? '' : `:${port}`;
-  return `${protocolForWebsocket}://${host}${portSuffix}${WEB_SOCKET_BATCH_PATH}`;
-}
-
-function generateWebSocketAddressForStreaming() {
-  const portSuffix = host !== LOCAL_HOST ? '' : `:${port}`;
-  return `${protocolForWebsocket}://${host}${portSuffix}${WEB_SOCKET_STREAM_PATH}`;
-}
-
 export function App() {
   const [transcribeMode, setTranscribeMode] = useState(RECORD_MODE.batch);
   const [hasPermissionForMic, setMicrophonePermission] = useState(false);
@@ -88,6 +62,7 @@ export function App() {
   });
   const audioContextRef = useRef<AudioContext | null>(null);
   const streamAudioContextRef = useRef<AudioContext | null>(null);
+  const webAudioSourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const recorderRef = useRef<Recorder | null>(null);
   const pcmWorkerRef = useRef<AudioWorkletNode | null>(null);
 
@@ -169,6 +144,25 @@ export function App() {
           video: false,
         });
         setMicrophonePermission(true);
+        /**
+         * start- Todo: Optimize the duplicated code for analyzer data
+         */
+        audioContextRef.current = new window.AudioContext({
+          sampleRate: SAMPLE_RATE,
+        });
+        recorderRef.current = new Recorder(audioContextRef.current, {
+          numChannels: 1,
+          sampleRate: SAMPLE_RATE,
+          // An array of 255 Numbers
+          // You can use this to visualize the audio stream
+          // If you use react, check out react-wave-stream
+          onAnalysed: (data: any) => {
+            setAudioDataForAnalyzer(data);
+          },
+        });
+
+        recorderRef.current?.init(streamRecognizeMedia);
+        // Todo - End
         if (!streamAudioContextRef.current) {
           streamAudioContextRef.current = new window.AudioContext({
             sampleRate: SAMPLE_RATE,
@@ -190,6 +184,7 @@ export function App() {
               streamRecognizeMedia
             );
           webAudioSource.connect(pcmWorkerRef.current);
+          webAudioSourceRef.current = webAudioSource;
         }
       } catch (err: unknown) {
         setMicrophonePermission(false);
@@ -242,17 +237,36 @@ export function App() {
       });
   }, [recordingStatus, setRecordingStatus]);
 
+  const onMessageHandler = (evt: any) => {
+    const streamSocket = streamSocketConnectionRef.current as WebSocket;
+    console.log('sending message');
+    streamSocket.send(evt.data);
+  };
+
   const streamRecordingStart = useCallback(() => {
+    //streamModeMicPermissionHandler();
     clearMessages();
     setRecordingStatus((_currentStatus) => RECORDING_STATUS.recording);
+    const streamSocketRef = streamSocketConnectionRef.current as WebSocket;
+    streamSocketRef.send(JSON.stringify({ shouldStartRecording: true }));
+
     const pcmWorker = pcmWorkerRef.current as AudioWorkletNode;
+
     if (pcmWorker) {
-      if (!pcmWorker.port.onmessage) {
-        pcmWorker.port.onmessage = (evt: any) => {
-          const streamSocket = streamSocketConnectionRef.current as WebSocket;
-          streamSocket.send(evt.data);
+      if (!pcmWorker.port?.onmessage) {
+        console.log('attaching message handler');
+        // pcmWorker.port.removeEventListener('message', onMessageHandler, true);
+        // pcmWorker.port.addEventListener('message', onMessageHandler, true);
+        // pcmWorker.port.addEventListener('messageerror', (e) => {
+        //   console.log('port error message', e);
+        // });
+        pcmWorker.port.onmessage = (e) => {
+          console.log('Message from port on pcmWorket', e.data);
+          onMessageHandler(e);
         };
       }
+      // console.log('Starting pcm worker port');
+      pcmWorker.port.postMessage(JSON.stringify({ shouldOpenPort: true }));
       pcmWorker.port?.start();
     } else {
       console.log('PCM worker is null');
@@ -271,10 +285,15 @@ export function App() {
     setRecordingStatus(RECORDING_STATUS.inactive);
   };
 
-  const stopStreamRecording = () => {
+  const stopStreamRecording = async () => {
     const pcmWorker = pcmWorkerRef.current as AudioWorkletNode;
-    pcmWorker.port?.close();
+    console.log('PCM worker', pcmWorker.port?.close);
+    await pcmWorker.port.postMessage(JSON.stringify({ shouldClosePort: true }));
+    // await pcmWorker.port.close();
+    //await webAudioSourceRef.current?.disconnect();
     setRecordingStatus(RECORDING_STATUS.inactive);
+    const streamSocketRef = streamSocketConnectionRef.current as WebSocket;
+    streamSocketRef.send(JSON.stringify({ isRecordingStopped: true }));
   };
 
   const stopRecording = () => {
@@ -286,8 +305,8 @@ export function App() {
   };
 
   useLayoutEffect(() => {
-    const socket = new WebSocket(generateWebSocketAddressForBatching());
-    const streamSocket = new WebSocket(generateWebSocketAddressForStreaming());
+    const socket = new WebSocket(getWebsocketAddress(RECORD_MODE.batch));
+    const streamSocket = new WebSocket(getWebsocketAddress(RECORD_MODE.stream));
 
     socket.onmessage = function (e) {
       const latestTranscriptionData = e.data
@@ -331,38 +350,6 @@ export function App() {
     socketConnectionRef.current = socket;
     streamSocketConnectionRef.current = streamSocket;
   }, [audioContextRef]);
-
-  // const [three2FiveSecondCounter, setThree2FiveSecondCounter] = useState(0);
-  // useEffect(() => {
-  //   let timer: any = false;
-  //   if (three2FiveSecondCounter >= 0) {
-  //     timer = setInterval(
-  //       () => setThree2FiveSecondCounter(three2FiveSecondCounter + 1),
-  //       1000
-  //     );
-  //   }
-  //   if (
-  //     (isCurrentRecordingMarkedForSplit === null ||
-  //       isCurrentRecordingMarkedForSplit === false) &&
-  //     isRecording(recordingStatus)
-  //   ) {
-  //     appDebugLogger.log(
-  //       'Awaiting a recording split:',
-  //       three2FiveSecondCounter
-  //     );
-  //     if (
-  //       (three2FiveSecondCounter >= 3 &&
-  //         three2FiveSecondCounter < 6 &&
-  //         isSpeechPaused(audioDataForAnalyzer?.data)) ||
-  //       three2FiveSecondCounter >= 6
-  //     ) {
-  //       splitRecordingForBatchProcess();
-  //       setThree2FiveSecondCounter(0);
-  //     }
-  //   }
-
-  //   return () => clearInterval(timer);
-  // }, [three2FiveSecondCounter]);
 
   useSmartSplitForRecording({
     recordingStatus,
@@ -438,6 +425,7 @@ export function App() {
 
   const clearMessages = () => {
     socketDataReceivedRef.current = [];
+    streamSocketDataReceivedRef.current = [];
     setSocketSendQueue([]);
     socketSendCounter.current = 0;
   };
@@ -457,11 +445,8 @@ export function App() {
         }}
         disableGutters
       >
-        <AppBar sx={{ background: '#fff', color: '#000' }}>
-          <Toolbar
-            variant="dense"
-            sx={{ display: 'flex', alignItems: 'center' }}
-          >
+        <AppBar sx={whiteBackgroundDarkText}>
+          <Toolbar variant="dense" sx={{ ...displayFlexRow, ...allCenter }}>
             <IconButton
               edge="start"
               color="inherit"
@@ -581,12 +566,15 @@ export function App() {
             </Button>
           </Box>
         </Container>
+
         <ListeningModal
           audioData={audioDataForAnalyzer}
           autoStopAfterSeconds={autoStopRecording}
           handlers={{ stopRecording }}
           recordingStatus={recordingStatus}
+          transcribeMode={transcribeMode}
         />
+
         <DebugDrawerBottom
           isDebugDrawerOpen={isDebugDrawerOpen}
           setDebugDrawOpen={setDebugDrawOpen}
@@ -606,6 +594,7 @@ export function App() {
             </Typography>
           </Container>
         </DebugDrawerBottom>
+
         <AppFooter />
       </Container>
     </>

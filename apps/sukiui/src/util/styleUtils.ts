@@ -28,3 +28,7 @@ export const blinkKeyframes = keyframes` 50% {
     opacity: 0;
   }`;
 
+export const whiteBackgroundDarkText = {
+  background: '#FFF',
+  color: '#000',
+};
