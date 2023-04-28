@@ -5,17 +5,13 @@ import {
   WEB_SOCKET_BATCH_PATH,
   WEB_SOCKET_STREAM_PATH,
 } from '@suki-speech-to-text/suki-api-configs';
+import {
+  shouldCloseStreamRecognize,
+  shouldOpenStreamRecognize,
+} from './utils/streamRecognizeUtils';
 
 export default async (expressServer) => {
-  const inputWaveStream = new Readable({
-    // eslint-disable-next-line @typescript-eslint/no-empty-function
-    read() {},
-  });
-  let outputTranscriptStream = new Readable({
-    // eslint-disable-next-line @typescript-eslint/no-empty-function
-    read() {},
-  });
-
+  // A dedicated webSocket server for async recognize requests
   const websocketServer = new WebSocketServer({
     noServer: true,
     path: WEB_SOCKET_BATCH_PATH,
@@ -24,6 +20,7 @@ export default async (expressServer) => {
     },
   });
 
+  // A dedicated webSocket server for stream recognize requests
   const wsForStreamRecognize = new WebSocketServer({
     noServer: true,
     path: WEB_SOCKET_STREAM_PATH,
@@ -32,6 +29,7 @@ export default async (expressServer) => {
     },
   });
 
+  //handle the 'connection' event from client (usually UI)
   websocketServer.on(
     'connection',
     function connection(websocketConnection, connectionRequest) {
@@ -43,6 +41,7 @@ export default async (expressServer) => {
       // to them if you need to pass data with the connection to identify it (e.g., a userId).
       //console.log('webocket connection praams: ', { a: 1 });
 
+      //receives a WaveBlob from UI and returns the 'transcription' returned from STT API
       websocketConnection.on('message', async (message: any, isBinary) => {
         let transcription = '';
         if (isBinary) {
@@ -61,15 +60,18 @@ export default async (expressServer) => {
   );
 
   expressServer.on('upgrade', (request, socket, head) => {
+    let webSocketServerInstance = wsForStreamRecognize;
     if (request.url === WEB_SOCKET_BATCH_PATH) {
-      websocketServer.handleUpgrade(request, socket, head, (websocket) => {
-        websocketServer.emit('connection', websocket, request);
-      });
-    } else {
-      wsForStreamRecognize.handleUpgrade(request, socket, head, (websocket) => {
-        wsForStreamRecognize.emit('connection', websocket, request);
-      });
+      webSocketServerInstance = websocketServer;
     }
+    webSocketServerInstance.handleUpgrade(
+      request,
+      socket,
+      head,
+      (websocket) => {
+        webSocketServerInstance.emit('connection', websocket, request);
+      }
+    );
   });
 
   wsForStreamRecognize.on(
@@ -83,28 +85,44 @@ export default async (expressServer) => {
       // to them if you need to pass data with the connection to identify it (e.g., a userId).
       //console.log('webocket connection praams: ', { a: 1 });
 
-      outputTranscriptStream = recognizeWaveStream(inputWaveStream);
-      outputTranscriptStream.on('data', (data) => {
-        console.log('Transcription data:', data);
-        websocketConnection.send(
-          JSON.stringify({
-            transcription: data.results[0].alternatives[0].transcript,
-          })
-        );
+      let inputWaveStream = new Readable({
+        // eslint-disable-next-line @typescript-eslint/no-empty-function
+        read() {},
       });
+      let outputTranscriptStream;
 
+      //receives a Stream from UI and returns the 'transcription' returned from STT API
       websocketConnection.on('message', async (message: any, isBinary) => {
         if (isBinary) {
-          console.log('Stream binary', message);
           inputWaveStream.push(message);
         } else {
-          console.log('Stream object:', message);
+          if (shouldCloseStreamRecognize(message)) {
+            outputTranscriptStream.emit('close');
+          } else if (shouldOpenStreamRecognize(message)) {
+            inputWaveStream = new Readable({
+              // eslint-disable-next-line @typescript-eslint/no-empty-function
+              read() {},
+            });
+            const { recognizeStream: outputTranscriptStreamNew } =
+              recognizeWaveStream(inputWaveStream);
+            outputTranscriptStream = outputTranscriptStreamNew;
+            outputTranscriptStream.on('data', (data) => {
+              const transciptDataConsolidated = data.results.map((res: any) => {
+                return res.alternatives
+                  .map((alt: any) => alt.transcript)
+                  .join(' ');
+              });
+              console.log('Transcription data:', transciptDataConsolidated);
+              websocketConnection.send(
+                JSON.stringify({
+                  transcription: transciptDataConsolidated,
+                })
+              );
+            });
+          }
         }
       });
     }
   );
-
-  // expressServer.on('upgrade', (request, socket, head) => {});
-
   return websocketServer;
 };

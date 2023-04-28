@@ -20,8 +20,6 @@ app.get('/api', (req, res) => {
 });
 
 app.get('*', (request, response) => {
-  console.log(__dirname);
-  console.log('running ui');
   response.sendFile(path.join(CLIENT_BUILD_PATH, 'index.html'));
 });
 
