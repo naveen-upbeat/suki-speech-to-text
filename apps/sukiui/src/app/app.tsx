@@ -239,7 +239,6 @@ export function App() {
 
   const onMessageHandler = (evt: any) => {
     const streamSocket = streamSocketConnectionRef.current as WebSocket;
-    console.log('sending message');
     streamSocket.send(evt.data);
   };
 
@@ -261,7 +260,7 @@ export function App() {
         //   console.log('port error message', e);
         // });
         pcmWorker.port.onmessage = (e) => {
-          console.log('Message from port on pcmWorket', e.data);
+          // console.log('Message from port on pcmWorket', e.data);
           onMessageHandler(e);
         };
       }
