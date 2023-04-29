@@ -107,11 +107,13 @@ export default async (expressServer) => {
               recognizeWaveStream(inputWaveStream);
             outputTranscriptStream = outputTranscriptStreamNew;
             outputTranscriptStream.on('data', (data) => {
-              const transciptDataConsolidated = data.results.map((res: any) => {
-                return res.alternatives
-                  .map((alt: any) => alt.transcript)
-                  .join(' ');
-              });
+              const transciptDataConsolidated = data.results
+                .map((res: any) => {
+                  return res.alternatives
+                    .map((alt: any) => alt.transcript)
+                    .join(' ');
+                })
+                .join(' ');
               console.log('Transcription data:', transciptDataConsolidated);
               websocketConnection.send(
                 JSON.stringify({

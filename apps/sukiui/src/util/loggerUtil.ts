@@ -1,11 +1,11 @@
 class ConsoleLogger {
-  static isDebugEnabled: boolean;
+  isDebugEnabled: boolean;
   constructor(isDebugEnabled: boolean) {
-    ConsoleLogger.isDebugEnabled = isDebugEnabled;
+    this.isDebugEnabled = isDebugEnabled;
   }
 
   log(...varArgs: any) {
-    if (ConsoleLogger.isDebugEnabled) {
+    if (this.isDebugEnabled) {
       console.log(...varArgs);
     } else {
       return;
@@ -13,7 +13,7 @@ class ConsoleLogger {
   }
 
   error(...varArgs: any) {
-    if (ConsoleLogger.isDebugEnabled) {
+    if (this.isDebugEnabled) {
       console.error(...varArgs);
     } else {
       return;
@@ -21,7 +21,7 @@ class ConsoleLogger {
   }
 
   info(...varArgs: any) {
-    if (ConsoleLogger.isDebugEnabled) {
+    if (this.isDebugEnabled) {
       console.info(...varArgs);
     } else {
       return;

@@ -1,23 +1,40 @@
-import { Drawer } from '@mui/material';
-import { JSXElementConstructor, ReactElement } from 'react';
+import { Container, Drawer, Typography } from '@mui/material';
+import { JSXElementConstructor, ReactElement, useEffect } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
+import { setDebugDrawerOpen } from '../store/debugDrawSlice';
+import { alignJustifyItemsCenter, flexColumn } from '../util/styleUtils';
+import AudioClips from './AudioClips';
 
 export type DebugDrawerBottomProps = {
-  isDebugDrawerOpen: boolean;
-  setDebugDrawOpen: (b: boolean) => void;
-  children: ReactElement<any, string | JSXElementConstructor<any>>;
+  refs: any;
+  // isDebugDrawerOpen: boolean;
+  // setDebugDrawOpen: (b: boolean) => void;
+  // children: ReactElement<any, string | JSXElementConstructor<any>>;
 };
 
 const DebugDrawerBottom = ({
-  isDebugDrawerOpen,
-  setDebugDrawOpen,
-  children,
-}: DebugDrawerBottomProps) => {
+  refs,
+}: // isDebugDrawerOpen,
+// setDebugDrawOpen,
+// children,
+DebugDrawerBottomProps) => {
+  const { socketSendCounter } = refs;
+  const { isDebugDrawerOpen } = useSelector((state: any) => state.debugDrawer);
+  const { isCurrentlyRecording } = useSelector(
+    (state: any) => state.microPhone
+  );
+  const dispatch = useDispatch();
+
+  useEffect(() => {
+    //
+  }, [isCurrentlyRecording]);
+
   return (
     <Drawer
       variant="temporary"
       anchor="bottom"
       open={isDebugDrawerOpen}
-      onClose={() => setDebugDrawOpen(false)}
+      onClose={() => dispatch(setDebugDrawerOpen(false))}
       ModalProps={{
         keepMounted: true, // Better open performance on mobile.
       }}
@@ -30,7 +47,17 @@ const DebugDrawerBottom = ({
         },
       }}
     >
-      {children}
+      <Container
+        sx={{
+          ...flexColumn,
+          ...alignJustifyItemsCenter,
+        }}
+      >
+        <AudioClips refs={refs} />
+        <Typography>
+          Total messages sent over socket: {socketSendCounter.current}
+        </Typography>
+      </Container>
     </Drawer>
   );
 };

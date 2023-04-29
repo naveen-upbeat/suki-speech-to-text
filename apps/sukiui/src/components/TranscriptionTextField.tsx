@@ -1,9 +1,12 @@
 import { TextField } from '@mui/material';
+import { RECORD_MODE } from '../util/recordingStateUtils';
+import { useDispatch, useSelector } from 'react-redux';
+import { useEffect } from 'react';
 
 export type TranscriptionTextFieldProps = {
+  refs?: any;
   maxRows?: number;
   minRows?: number;
-  transcriptionsArray: string[];
 };
 
 const DEFAULT_TEXT_PLACEHOLDER = `Steps:
@@ -35,14 +38,21 @@ function textFieldValue(transcriptionsArray: string[]) {
 const defaultProps: TranscriptionTextFieldProps = {
   maxRows: 10,
   minRows: 4,
-  transcriptionsArray: [''],
 };
 
-const TranscriptionTextField = ({
-  maxRows,
-  minRows,
-  transcriptionsArray,
-} = defaultProps) => {
+const TranscriptionTextField = ({ maxRows, minRows, refs } = defaultProps) => {
+  const { socketDataReceivedRef, streamSocketDataReceivedRef } = refs;
+  const { transcribeMode } = useSelector((state: any) => state.transcribeMode);
+  const { isCurrentlyRecording } = useSelector(
+    (state: any) => state.microPhone
+  );
+  const transcriptionsArray =
+    transcribeMode === RECORD_MODE.batch
+      ? socketDataReceivedRef.current
+      : streamSocketDataReceivedRef.current;
+  useEffect(() => {
+    // console.log('transcibe mode or isCurrentlyRecording changed');
+  }, [isCurrentlyRecording]);
   return (
     <TextField
       value={textFieldValue(transcriptionsArray)}

@@ -1,16 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { RECORD_MODE, isRecording } from '../util/recordingStateUtils';
 import { isSpeechPaused } from '../util/soundAnalyserUtils';
+import AppContext from '../context/AppContext';
+import { ConsoleLogger } from '../util/loggerUtil';
 
 const useSmartSplitForRecording = ({
-  recordingStatus,
+  isCurrentlyRecording,
   isCurrentRecordingMarkedForSplit,
-  audioDataForAnalyzer,
+  audioAnalyzerData,
   splitRecordingForBatchProcess,
-  appDebugLogger,
   transcribeMode,
 }: any) => {
   const [three2FiveSecondCounter, setThree2FiveSecondCounter] = useState(0);
+  const { appDebugLogger } = useContext(AppContext);
+  const appDebugReal = appDebugLogger as ConsoleLogger;
 
   useEffect(() => {
     let smartSplitTimerControl: NodeJS.Timer;
@@ -23,17 +26,14 @@ const useSmartSplitForRecording = ({
     if (
       (isCurrentRecordingMarkedForSplit === null ||
         isCurrentRecordingMarkedForSplit === false) &&
-      isRecording(recordingStatus) &&
+      isCurrentlyRecording &&
       transcribeMode === RECORD_MODE.batch
     ) {
-      appDebugLogger.log(
-        'Awaiting a recording split:',
-        three2FiveSecondCounter
-      );
+      appDebugReal.log('Awaiting a recording split:', three2FiveSecondCounter);
       if (
         (three2FiveSecondCounter >= 3 &&
           three2FiveSecondCounter < 6 &&
-          isSpeechPaused(audioDataForAnalyzer?.data)) ||
+          isSpeechPaused(audioAnalyzerData?.data)) ||
         three2FiveSecondCounter >= 6
       ) {
         splitRecordingForBatchProcess();

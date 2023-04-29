@@ -18,13 +18,16 @@ import {
   flexColumn,
 } from '../util/styleUtils';
 import { useEffect, useState } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
+import { setRecording } from '../store/microPhoneSlice';
+import { getMessageKeyForStreamStop } from '@suki-speech-to-text/suki-api-configs';
 
 export type ListeningModalProps = {
-  recordingStatus: string;
-  handlers: { stopRecording: any };
-  audioData: any;
   autoStopAfterSeconds?: number;
-  transcribeMode: (typeof RECORD_MODE)[keyof typeof RECORD_MODE];
+  refs: {
+    pcmWorkerRef: any;
+    streamSocketConnectionRef: any;
+  };
 };
 
 const defaultProps: Partial<ListeningModalProps> = {
@@ -44,30 +47,57 @@ const modalStyle = {
 };
 
 const ListeningModal = ({
-  recordingStatus,
-  handlers,
-  audioData,
   autoStopAfterSeconds = defaultProps.autoStopAfterSeconds,
-  transcribeMode,
+  refs,
 }: ListeningModalProps) => {
+  const { pcmWorkerRef, streamSocketConnectionRef } = refs;
   const [autoStopCounter, setAutoStopCounter] = useState(autoStopAfterSeconds);
+
+  const { audioAnalyzerData, isCurrentlyRecording } = useSelector(
+    (state: any) => state.microPhone
+  );
+
+  const { transcribeMode } = useSelector((state: any) => state.transcribeMode);
+  const dispatch = useDispatch();
+
+  const stopBatchRecording = () => {
+    dispatch(setRecording(false));
+  };
+
+  const stopStreamRecording = async () => {
+    const pcmWorker = pcmWorkerRef.current as AudioWorkletNode;
+    pcmWorker.port.postMessage(JSON.stringify({ shouldClosePort: true }));
+    dispatch(setRecording(false));
+    const streamSocketRef = streamSocketConnectionRef.current as WebSocket;
+    streamSocketRef.send(
+      JSON.stringify({ [getMessageKeyForStreamStop()]: true })
+    );
+  };
+
+  const stopRecording = () => {
+    if (transcribeMode === RECORD_MODE.batch) {
+      stopBatchRecording();
+    } else if (transcribeMode === RECORD_MODE.stream) {
+      stopStreamRecording();
+    }
+  };
 
   useEffect(() => {
     const timer =
       (autoStopCounter as number) > 0 &&
-      isRecording(recordingStatus as string) &&
+      isCurrentlyRecording &&
       setInterval(
         () => setAutoStopCounter((autoStopCounter as number) - 1),
         1000
       );
     if (autoStopCounter === 0 && isRecordModeBatch(transcribeMode)) {
-      handlers.stopRecording();
+      stopRecording();
     }
-    if (!isRecording(recordingStatus)) {
+    if (!isCurrentlyRecording) {
       setAutoStopCounter(autoStopAfterSeconds);
     }
     return () => clearInterval(timer as any);
-  }, [autoStopCounter, recordingStatus]);
+  }, [autoStopCounter]);
 
   const extendRecording = (seconds: number) => {
     setAutoStopCounter((autoStopCounter as number) + seconds);
@@ -78,9 +108,9 @@ const ListeningModal = ({
 
   return (
     <Modal
-      open={isRecording(recordingStatus as string)}
-      onClose={(handlers as any).stopRecording}
-      onBackdropClick={(handlers as any).stopRecording}
+      open={isCurrentlyRecording}
+      onClose={stopRecording}
+      onBackdropClick={stopRecording}
       aria-labelledby="modal-modal-title"
       aria-describedby="modal-modal-description"
       sx={{
@@ -123,12 +153,8 @@ const ListeningModal = ({
                   Autostop in: {autoStopCounter}s{' '}
                 </Typography>
               )}
-            {isRecording(recordingStatus) && (
-              <Button
-                color="error"
-                variant="contained"
-                onClick={handlers.stopRecording}
-              >
+            {isCurrentlyRecording && (
+              <Button color="error" variant="contained" onClick={stopRecording}>
                 <StopCircleTwoToneIcon />
               </Button>
             )}
@@ -174,7 +200,7 @@ const ListeningModal = ({
               height: '80px',
             }}
           >
-            <WaveStream data={audioData?.data} />
+            <WaveStream data={audioAnalyzerData?.data} />
           </Box>
         </Container>
       </Box>
