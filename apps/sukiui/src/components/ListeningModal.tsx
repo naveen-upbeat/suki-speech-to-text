@@ -56,6 +56,9 @@ const ListeningModal = ({
   const { audioAnalyzerData, isCurrentlyRecording } = useSelector(
     (state: any) => state.microPhone
   );
+  const { isCurrentRecordingMarkedForSplit } = useSelector(
+    (state: any) => state.batchRecording
+  );
 
   const { transcribeMode } = useSelector((state: any) => state.transcribeMode);
   const dispatch = useDispatch();
@@ -97,7 +100,7 @@ const ListeningModal = ({
       setAutoStopCounter(autoStopAfterSeconds);
     }
     return () => clearInterval(timer as any);
-  }, [autoStopCounter]);
+  }, [autoStopCounter, isCurrentRecordingMarkedForSplit]);
 
   const extendRecording = (seconds: number) => {
     setAutoStopCounter((autoStopCounter as number) + seconds);

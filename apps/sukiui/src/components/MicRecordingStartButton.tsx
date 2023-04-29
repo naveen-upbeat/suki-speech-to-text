@@ -113,7 +113,10 @@ const MicRecordingStartButton = ({
       )}`
     );
 
-    if (isCurrentRecordingMarkedForSplit) {
+    if (
+      recorderRef.current &&
+      (isCurrentRecordingMarkedForSplit || !isCurrentlyRecording)
+    ) {
       appDebugReal.log(
         'stopping recording processess at',
         new Date().getSeconds()
