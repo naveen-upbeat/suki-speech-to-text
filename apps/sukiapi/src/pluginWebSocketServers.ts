@@ -7,7 +7,7 @@ import {
 } from '@suki-speech-to-text/suki-api-configs';
 import {
   extractTransciptFromRecognizeResponse,
-  isMessageAboutStreamClose,
+  isMessageToSignalStreamClose,
   isMessageToSignalStreamOpen,
 } from './utils/streamRecognizeUtils';
 
@@ -97,7 +97,7 @@ export default async (expressServer) => {
         if (isBinary) {
           inputWaveStream.push(message);
         } else {
-          if (isMessageAboutStreamClose(message)) {
+          if (isMessageToSignalStreamClose(message)) {
             outputTranscriptStream.emit('close');
           } else if (isMessageToSignalStreamOpen(message)) {
             inputWaveStream = new Readable({

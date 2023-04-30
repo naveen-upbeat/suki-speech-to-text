@@ -1,6 +1,5 @@
 import speech from '@google-cloud/speech';
 import * as pumpify from 'pumpify';
-const client = new speech.SpeechClient();
 import { google } from '@google-cloud/speech/build/protos/protos';
 import { Readable } from 'stream';
 import {
@@ -15,6 +14,8 @@ const requestConfigDefault = {
   sampleRateHertz: getSampleRateForRecognize(),
   languageCode: 'en-US',
 };
+
+const client = new speech.SpeechClient();
 
 /**
  * recognizeAsync() -> Makes a async recognize request
@@ -40,12 +41,9 @@ export async function recognizeAsync({ content }) {
     config: config,
   };
 
-  // Detects speech in the audio file
+  // Detects speech from audio content specified in the request
   const [response] = await client.recognize(request);
   const transcription = extractTransciptFromRecognizeResponse(response);
-  //  response.results
-  //   .map((result) => result.alternatives[0].transcript)
-  //   .join(' ');
   console.log(
     `Transcription: ${transcription}, Results length: ${response.results.length}`
   );

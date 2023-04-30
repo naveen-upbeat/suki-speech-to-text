@@ -18,7 +18,7 @@ export const isMessageToSignalStreamOpen = (bufferMessage: any) => {
   return result;
 };
 
-export const isMessageAboutStreamClose = (bufferMessage: any) => {
+export const isMessageToSignalStreamClose = (bufferMessage: any) => {
   let result = false;
   try {
     result = JSON.parse(bufferMessage.toString())[getMessageKeyForStreamStop()];
