@@ -1,7 +1,7 @@
 import { Button } from '@mui/material';
 import MicTwoToneIcon from '@mui/icons-material/MicTwoTone';
 import { useCallback, useContext, useEffect } from 'react';
-import { RECORD_MODE } from '../util/recordingStateUtils';
+import { RECORD_MODE, isRecordModeBatch } from '../util/recordingStateUtils';
 import { useSelector, useDispatch } from 'react-redux';
 import { setRecording } from '../store/microPhoneSlice';
 import {
@@ -57,6 +57,8 @@ const MicRecordingStartButton = ({
   const clearMessages = () => {
     socketDataReceivedRef.current = [];
     streamSocketDataReceivedRef.current = [];
+    socketMessageSendQueueCopy.current = [];
+    socketSendCounter.current = 0;
   };
   const splitRecordingForBatchProcess = () => {
     dispatch(markCurrentRecordingForSplit(true));
@@ -115,6 +117,7 @@ const MicRecordingStartButton = ({
 
     if (
       recorderRef.current &&
+      isRecordModeBatch(transcribeMode) &&
       (isCurrentRecordingMarkedForSplit || !isCurrentlyRecording)
     ) {
       appDebugReal.log(
@@ -127,7 +130,7 @@ const MicRecordingStartButton = ({
         const socketSendQueueObj = socketMessageSendQueue.current as Blob[];
         appDebugReal.log('Trying to send message blob: ', blob);
         socketMessageSendQueueCopy.current.push(blob);
-        //dispatch(insertWaveBlob(blob));
+        //dispatch(insertWaveBlob(blob)); //Commented this after redux complained about unserializable items
         socketSendQueueObj.push(blob);
         appDebugReal.log(
           'Message queue length in Ref and State:',
@@ -147,7 +150,11 @@ const MicRecordingStartButton = ({
       });
     }
 
-    if (isCurrentRecordingMarkedForSplit === false && isCurrentlyRecording) {
+    if (
+      isRecordModeBatch(transcribeMode) &&
+      isCurrentRecordingMarkedForSplit === false &&
+      isCurrentlyRecording
+    ) {
       appDebugReal.log(
         'Started another recording process at',
         new Date().getSeconds()
@@ -174,7 +181,7 @@ const MicRecordingStartButton = ({
   if (isMicroPhonePermissionGranted) {
     return (
       <Button variant="outlined" onClick={startRecording}>
-        <MicTwoToneIcon /> {!isCurrentlyRecording ? 'Speak' : 'Listening...'}
+        <MicTwoToneIcon /> {!isCurrentlyRecording ? 'Start' : 'Listening...'}
       </Button>
     );
   }

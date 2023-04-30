@@ -10,6 +10,10 @@ import Recorder from '../util/recorderUtils';
 import { resolveCurrentEnvironments } from '../util/environmentUtils';
 import { ConsoleLogger } from '../util/loggerUtil';
 import { RECORD_MODE } from '../util/recordingStateUtils';
+import {
+  getAudioChannelCount,
+  getSampleRateForRecognize,
+} from '@suki-speech-to-text/suki-api-configs';
 
 export type AskMicPermissionsProps = {
   refs: {
@@ -20,7 +24,8 @@ export type AskMicPermissionsProps = {
   };
 };
 
-const SAMPLE_RATE = 16000;
+const SAMPLE_RATE = getSampleRateForRecognize();
+const AUDIO_CHANNEL_COUNT = getAudioChannelCount();
 
 const currentEnvironments = resolveCurrentEnvironments();
 
@@ -42,26 +47,28 @@ const AskMicPermissionsButton = ({ refs }: AskMicPermissionsProps) => {
             deviceId: 'default',
             sampleRate: SAMPLE_RATE,
             sampleSize: 16,
-            channelCount: 1,
+            channelCount: AUDIO_CHANNEL_COUNT,
           },
           video: false,
         });
         dispatch(setMicrophonePermission(true));
-        audioContextRef.current = new window.AudioContext({
-          sampleRate: SAMPLE_RATE,
-        });
-        recorderRef.current = new Recorder(audioContextRef.current, {
-          numChannels: 1,
-          sampleRate: SAMPLE_RATE,
-          // An array of 255 Numbers
-          // You can use this to visualize the audio stream
-          // If you use react, check out react-wave-stream
-          onAnalysed: (data: any) => {
-            dispatch(setAudioAnalyzerData(data));
-          },
-        });
+        if (!audioContextRef.current && !recorderRef.current) {
+          audioContextRef.current = new window.AudioContext({
+            sampleRate: SAMPLE_RATE,
+          });
+          recorderRef.current = new Recorder(audioContextRef.current, {
+            numChannels: AUDIO_CHANNEL_COUNT,
+            sampleRate: SAMPLE_RATE,
+            // An array of 255 Numbers
+            // You can use this to visualize the audio stream
+            // If you use react, check out react-wave-stream
+            onAnalysed: (data: any) => {
+              dispatch(setAudioAnalyzerData(data));
+            },
+          });
 
-        recorderRef.current?.init(streamData);
+          recorderRef.current?.init(streamData);
+        }
       } catch (err: unknown) {
         dispatch(setMicrophonePermission(false));
         if (typeof err === 'object' && err !== null) {
@@ -85,7 +92,7 @@ const AskMicPermissionsButton = ({ refs }: AskMicPermissionsProps) => {
             deviceId: 'default',
             sampleRate: SAMPLE_RATE,
             sampleSize: 16,
-            channelCount: 1,
+            channelCount: AUDIO_CHANNEL_COUNT,
           },
           video: false,
         });
@@ -93,22 +100,24 @@ const AskMicPermissionsButton = ({ refs }: AskMicPermissionsProps) => {
         /**
          * start- Todo: Optimize the duplicated code for analyzer data
          */
-        audioContextRef.current = new window.AudioContext({
-          sampleRate: SAMPLE_RATE,
-        });
-        recorderRef.current = new Recorder(audioContextRef.current, {
-          numChannels: 1,
-          sampleRate: SAMPLE_RATE,
-          // An array of 255 Numbers
-          // You can use this to visualize the audio stream
-          // If you use react, check out react-wave-stream
-          onAnalysed: (data: any) => {
-            dispatch(setAudioAnalyzerData(data));
-            // setAudioDataForAnalyzer(data);
-          },
-        });
+        if (!audioContextRef.current && !recorderRef.current) {
+          audioContextRef.current = new window.AudioContext({
+            sampleRate: SAMPLE_RATE,
+          });
+          recorderRef.current = new Recorder(audioContextRef.current, {
+            numChannels: AUDIO_CHANNEL_COUNT,
+            sampleRate: SAMPLE_RATE,
+            // An array of 255 Numbers
+            // You can use this to visualize the audio stream
+            // If you use react, check out react-wave-stream
+            onAnalysed: (data: any) => {
+              dispatch(setAudioAnalyzerData(data));
+              // setAudioDataForAnalyzer(data);
+            },
+          });
 
-        recorderRef.current?.init(streamRecognizeMedia);
+          recorderRef.current?.init(streamRecognizeMedia);
+        }
         // Todo - End
         if (!streamAudioContextRef.current) {
           streamAudioContextRef.current = new window.AudioContext({
@@ -122,7 +131,7 @@ const AskMicPermissionsButton = ({ refs }: AskMicPermissionsProps) => {
             streamAudioContextRef.current,
             'audio-pcm-worker',
             {
-              outputChannelCount: [1],
+              outputChannelCount: [AUDIO_CHANNEL_COUNT],
             }
           );
 

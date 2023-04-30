@@ -1,49 +1,49 @@
 import {
   BUFFER_MESSAGE_FORMAT_ERROR,
-  shouldCloseStreamRecognize,
-  shouldOpenStreamRecognize,
+  isMessageAboutStreamClose,
+  isMessageToSignalStreamOpen,
 } from './streamRecognizeUtils';
 
 describe('streamRecognizeUtils -', () => {
-  describe('method shouldOpenStreamRecognize() - ', () => {
+  describe('method isMessageToSignalStreamOpen() - ', () => {
     it('is available', () => {
-      expect(shouldOpenStreamRecognize).toBeDefined();
-      expect(typeof shouldOpenStreamRecognize).toBe('function');
+      expect(isMessageToSignalStreamOpen).toBeDefined();
+      expect(typeof isMessageToSignalStreamOpen).toBe('function');
     });
     it('throws error if bufferMessage is not JSON', () => {
       const testBufferMessage = { shouldStartRecording: true };
-      expect(() => shouldOpenStreamRecognize(testBufferMessage)).toThrow(
+      expect(() => isMessageToSignalStreamOpen(testBufferMessage)).toThrow(
         BUFFER_MESSAGE_FORMAT_ERROR
       );
     });
     it('return true when message has key - shouldStartRecording with value true', () => {
       const testBufferMessage = JSON.stringify({ shouldStartRecording: true });
-      expect(shouldOpenStreamRecognize(testBufferMessage)).toBeTruthy();
+      expect(isMessageToSignalStreamOpen(testBufferMessage)).toBeTruthy();
     });
     it('return false when message has key - shouldStartRecording with value false', () => {
       const testBufferMessage = JSON.stringify({ shouldStartRecording: false });
-      expect(shouldOpenStreamRecognize(testBufferMessage)).toBeFalsy();
+      expect(isMessageToSignalStreamOpen(testBufferMessage)).toBeFalsy();
     });
   });
 
-  describe('method shouldCloseStreamRecognize() - ', () => {
+  describe('method isMessageAboutStreamClose() - ', () => {
     it('is available', () => {
-      expect(shouldCloseStreamRecognize).toBeDefined();
-      expect(typeof shouldCloseStreamRecognize).toBe('function');
+      expect(isMessageAboutStreamClose).toBeDefined();
+      expect(typeof isMessageAboutStreamClose).toBe('function');
     });
     it('throws error if bufferMessage is not JSON', () => {
       const testBufferMessage = { shouldStartRecording: true };
-      expect(() => shouldCloseStreamRecognize(testBufferMessage)).toThrow(
+      expect(() => isMessageAboutStreamClose(testBufferMessage)).toThrow(
         BUFFER_MESSAGE_FORMAT_ERROR
       );
     });
     it('return true when message has key - isRecordingStopped with value true', () => {
       const testBufferMessage = JSON.stringify({ isRecordingStopped: true });
-      expect(shouldCloseStreamRecognize(testBufferMessage)).toBeTruthy();
+      expect(isMessageAboutStreamClose(testBufferMessage)).toBeTruthy();
     });
     it('return false when message has key - isRecordingStopped with value false', () => {
       const testBufferMessage = JSON.stringify({ isRecordingStopped: false });
-      expect(shouldCloseStreamRecognize(testBufferMessage)).toBeFalsy();
+      expect(isMessageAboutStreamClose(testBufferMessage)).toBeFalsy();
     });
   });
 });

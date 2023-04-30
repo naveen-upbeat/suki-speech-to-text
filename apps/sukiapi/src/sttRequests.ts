@@ -3,11 +3,16 @@ import * as pumpify from 'pumpify';
 const client = new speech.SpeechClient();
 import { google } from '@google-cloud/speech/build/protos/protos';
 import { Readable } from 'stream';
+import {
+  getAudioChannelCount,
+  getSampleRateForRecognize,
+} from '@suki-speech-to-text/suki-api-configs';
+import { extractTransciptFromRecognizeResponse } from './utils/streamRecognizeUtils';
 
 const requestConfigDefault = {
   encoding: 1 /** LINEAR16 */,
-  audioChannelCount: 1,
-  sampleRateHertz: 16000,
+  audioChannelCount: getAudioChannelCount(),
+  sampleRateHertz: getSampleRateForRecognize(),
   languageCode: 'en-US',
 };
 
@@ -37,9 +42,10 @@ export async function recognizeAsync({ content }) {
 
   // Detects speech in the audio file
   const [response] = await client.recognize(request);
-  const transcription = response.results
-    .map((result) => result.alternatives[0].transcript)
-    .join(' ');
+  const transcription = extractTransciptFromRecognizeResponse(response);
+  //  response.results
+  //   .map((result) => result.alternatives[0].transcript)
+  //   .join(' ');
   console.log(
     `Transcription: ${transcription}, Results length: ${response.results.length}`
   );

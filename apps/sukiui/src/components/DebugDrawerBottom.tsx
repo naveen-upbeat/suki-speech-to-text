@@ -27,7 +27,7 @@ DebugDrawerBottomProps) => {
 
   useEffect(() => {
     //
-  }, [isCurrentlyRecording]);
+  }, [isCurrentlyRecording, socketSendCounter, isDebugDrawerOpen]);
 
   return (
     <Drawer

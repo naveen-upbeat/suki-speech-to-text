@@ -6,8 +6,9 @@ import {
   WEB_SOCKET_STREAM_PATH,
 } from '@suki-speech-to-text/suki-api-configs';
 import {
-  shouldCloseStreamRecognize,
-  shouldOpenStreamRecognize,
+  extractTransciptFromRecognizeResponse,
+  isMessageAboutStreamClose,
+  isMessageToSignalStreamOpen,
 } from './utils/streamRecognizeUtils';
 
 export default async (expressServer) => {
@@ -96,9 +97,9 @@ export default async (expressServer) => {
         if (isBinary) {
           inputWaveStream.push(message);
         } else {
-          if (shouldCloseStreamRecognize(message)) {
+          if (isMessageAboutStreamClose(message)) {
             outputTranscriptStream.emit('close');
-          } else if (shouldOpenStreamRecognize(message)) {
+          } else if (isMessageToSignalStreamOpen(message)) {
             inputWaveStream = new Readable({
               // eslint-disable-next-line @typescript-eslint/no-empty-function
               read() {},
@@ -106,14 +107,9 @@ export default async (expressServer) => {
             const { recognizeStream: outputTranscriptStreamNew } =
               recognizeWaveStream(inputWaveStream);
             outputTranscriptStream = outputTranscriptStreamNew;
-            outputTranscriptStream.on('data', (data) => {
-              const transciptDataConsolidated = data.results
-                .map((res: any) => {
-                  return res.alternatives
-                    .map((alt: any) => alt.transcript)
-                    .join(' ');
-                })
-                .join(' ');
+            outputTranscriptStream.on('data', (data: unknown) => {
+              const transciptDataConsolidated =
+                extractTransciptFromRecognizeResponse(data);
               console.log('Transcription data:', transciptDataConsolidated);
               websocketConnection.send(
                 JSON.stringify({

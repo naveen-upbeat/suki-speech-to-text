@@ -5,8 +5,13 @@ import { setDebugDrawerOpen } from '../store/debugDrawSlice';
 import { RECORD_MODE } from '../util/recordingStateUtils';
 
 const ClearAndDebugButtons = ({ refs }: any) => {
-  const { socketDataReceivedRef, streamSocketDataReceivedRef } = refs;
-  
+  const {
+    socketDataReceivedRef,
+    streamSocketDataReceivedRef,
+    socketMessageSendQueueCopy,
+    socketSendCounter,
+  } = refs;
+
   const dispatch = useDispatch();
 
   const { transcribeMode } = useSelector((state: any) => state.transcribeMode);
@@ -14,6 +19,8 @@ const ClearAndDebugButtons = ({ refs }: any) => {
   const clearMessages = () => {
     socketDataReceivedRef.current = [];
     streamSocketDataReceivedRef.current = [];
+    socketMessageSendQueueCopy.current = [];
+    socketSendCounter.current = 0;
   };
 
   return (

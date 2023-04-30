@@ -8,7 +8,11 @@ export type AudioClipsProps = {
 };
 
 const AudioClips = React.memo(({ refs }: AudioClipsProps) => {
-  const { socketMessageSendQueueCopy, socketDataReceivedRef } = refs;
+  const {
+    socketMessageSendQueueCopy,
+    socketDataReceivedRef,
+    socketSendCounter,
+  } = refs;
   const transcriptionsArray = socketDataReceivedRef.current;
   const { isCurrentRecordingMarkedForSplit } = useSelector(
     (state: any) => state.batchRecording
@@ -17,9 +21,9 @@ const AudioClips = React.memo(({ refs }: AudioClipsProps) => {
   //   (state: any) => state.batchRecording
   // );
   const socketMessageQueueState = socketMessageSendQueueCopy.current;
-  // useEffect(() => {
-  //   console.log('have some transcripts', socketDataReceivedRef.current.length);
-  // }, [isCurrentRecordingMarkedForSplit]);
+  useEffect(() => {
+    //   console.log('have some transcripts', socketDataReceivedRef.current.length);
+  }, [isCurrentRecordingMarkedForSplit, socketSendCounter]);
   return (
     <Container sx={{ padding: '10px' }}>
       {socketMessageQueueState.map((bl: any, ind: number) => {

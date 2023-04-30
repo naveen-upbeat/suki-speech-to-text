@@ -34,18 +34,6 @@ const defaultProps: Partial<ListeningModalProps> = {
   autoStopAfterSeconds: 12,
 };
 
-const modalStyle = {
-  position: 'absolute',
-  top: '50%',
-  left: '50%',
-  transform: 'translate(-50%, -50%)',
-  width: 400,
-  bgcolor: 'background.paper',
-  border: '2px solid #000',
-  boxShadow: 24,
-  p: 4,
-};
-
 const ListeningModal = ({
   autoStopAfterSeconds = defaultProps.autoStopAfterSeconds,
   refs,
@@ -65,6 +53,7 @@ const ListeningModal = ({
 
   const stopBatchRecording = () => {
     dispatch(setRecording(false));
+    setAutoStopCounter(autoStopAfterSeconds);
   };
 
   const stopStreamRecording = async () => {
@@ -79,8 +68,10 @@ const ListeningModal = ({
 
   const stopRecording = () => {
     if (transcribeMode === RECORD_MODE.batch) {
+      console.log('batch recording stop');
       stopBatchRecording();
     } else if (transcribeMode === RECORD_MODE.stream) {
+      console.log('stream recording stop');
       stopStreamRecording();
     }
   };
